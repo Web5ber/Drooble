@@ -1,6 +1,5 @@
 from fastapi import FastAPI, Request
-from telegram import Update
-from telegram.ext import Application, MessageHandler, filters, ContextTypes
+import telebot
 
 # Replace with your Telegram bot token from BotFather
 TOKEN = "8881016785:AAHduCchY7a7cD912X2Jt8UZ0LytOo8Eaws"
@@ -8,23 +7,22 @@ TOKEN = "8881016785:AAHduCchY7a7cD912X2Jt8UZ0LytOo8Eaws"
 # Initialize FastAPI app
 app = FastAPI()
 
-# Create Telegram application
-application = Application.builder().token(TOKEN).build()
+# Create the bot
+bot = telebot.TeleBot(TOKEN)
 
-# Define message handler
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+# Define a message handler that responds with "hi"
+@bot.message_handler(func=lambda message: True)
+def handle_message(message):
     """Handle any message and respond with 'hi'"""
-    await update.message.reply_text("hi")
-
-# Add handler to the application
-application.add_handler(MessageHandler(filters.ALL, handle_message))
+    bot.reply_to(message, "hi")
 
 # Set up webhook endpoint
 @app.post("/webhook")
 async def webhook(request: Request):
     """Handle incoming webhook updates from Telegram"""
-    update = Update.de_json(await request.json(), application.bot)
-    await application.update_queue.put(update)
+    json_string = await request.json()
+    update = telebot.types.Update.de_json(json_string)
+    bot.process_new_updates([update])
     return {"status": "ok"}
 
 # Health check endpoint
