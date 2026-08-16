@@ -20,12 +20,26 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 # Add handler to the application
 application.add_handler(MessageHandler(filters.ALL, handle_message))
 
+# Startup event to initialize the application
+@app.on_event("startup")
+async def startup_event():
+    """Initialize the telegram application on startup"""
+    await application.initialize()
+    await application.start()
+
+# Shutdown event to cleanup
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup the telegram application on shutdown"""
+    await application.stop()
+    await application.shutdown()
+
 # Set up webhook endpoint
 @app.post("/webhook")
 async def webhook(request: Request):
     """Handle incoming webhook updates from Telegram"""
     update = Update.de_json(await request.json(), application.bot)
-    await application.update_queue.put(update)
+    await application.process_update(update)
     return {"status": "ok"}
 
 # Health check endpoint
