@@ -1,9 +1,10 @@
 from fastapi import FastAPI, Request
 from telegram import Update
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
+import asyncio
 
 # Replace with your Telegram bot token from BotFather
-TOKEN = "YOUR_BOT_TOKEN_HERE"
+TOKEN = "8881016785:AAHduCchY7a7cD912X2Jt8UZ0LytOo8Eaws"
 
 # Initialize FastAPI app
 app = FastAPI()
