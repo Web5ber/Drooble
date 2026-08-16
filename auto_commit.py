@@ -45,8 +45,11 @@ class AutoCommitHandler(FileSystemEventHandler):
                 # Add all changes
                 subprocess.run(['git', 'add', '.'], check=True)
                 
-                # Commit with a timestamp message
-                commit_message = f"Auto-commit: {time.strftime('%Y-%m-%d %H:%M:%S')}"
+                # Ask user for commit message
+                commit_message = input("Enter commit message description: ")
+                if not commit_message.strip():
+                    commit_message = f"Auto-commit: {time.strftime('%Y-%m-%d %H:%M:%S')}"
+                
                 subprocess.run(['git', 'commit', '-m', commit_message], check=True)
                 
                 # Push to remote
