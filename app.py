@@ -1,11 +1,37 @@
 from fastapi import FastAPI, Request
+from contextlib import asynccontextmanager
 import telebot
+import requests
+import os
+from dotenv import load_dotenv
 
-# Replace with your Telegram bot token from BotFather
-TOKEN = "8881016785:AAHduCchY7a7cD912X2Jt8UZ0LytOo8Eaws"
+# Load environment variables from .env file
+load_dotenv()
 
-# Initialize FastAPI app
-app = FastAPI()
+# Get Telegram bot token from environment variable
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+
+# Set your ngrok URL here (or use environment variable)
+WEBHOOK_URL = os.getenv("WEBHOOK_URL", "https://your-ngrok-url.ngrok.io")
+
+# Lifespan context manager for startup events
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Set the Telegram webhook on startup"""
+    webhook_url = f"{WEBHOOK_URL}/webhook"
+    response = requests.get(
+        f"https://api.telegram.org/bot{TOKEN}/setWebhook",
+        params={"url": webhook_url}
+    )
+    if response.status_code == 200:
+        print(f"Webhook set successfully to {webhook_url}")
+    else:
+        print(f"Failed to set webhook: {response.text}")
+    yield
+    # Cleanup code here if needed
+
+# Initialize FastAPI app with lifespan
+app = FastAPI(lifespan=lifespan)
 
 # Create the bot
 bot = telebot.TeleBot(TOKEN)

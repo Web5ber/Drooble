@@ -1,8 +1,13 @@
 import logging
 import telebot
+import os
+from dotenv import load_dotenv
 
-# Replace with your Telegram bot token from BotFather
-TOKEN = "8881016785:AAHduCchY7a7cD912X2Jt8UZ0LytOo8Eaws"
+# Load environment variables from .env file
+load_dotenv()
+
+# Get Telegram bot token from environment variable
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
 # Enable logging
 logging.basicConfig(
