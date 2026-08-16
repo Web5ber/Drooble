@@ -1,6 +1,5 @@
 import logging
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+import telebot
 
 # Replace with your Telegram bot token from BotFather
 TOKEN = "8881016785:AAHduCchY7a7cD912X2Jt8UZ0LytOo8Eaws"
@@ -11,21 +10,19 @@ logging.basicConfig(
     level=logging.INFO
 )
 
+# Create the bot
+bot = telebot.TeleBot(TOKEN)
+
 # Define a message handler that responds with "hi"
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+@bot.message_handler(func=lambda message: True)
+def handle_message(message):
     """Handle any message and respond with 'hi'"""
-    await update.message.reply_text("hi")
+    bot.reply_to(message, "hi")
 
-def main() -> None:
+def main():
     """Start the bot."""
-    # Create the Application
-    application = Application.builder().token(TOKEN).build()
-
-    # Add message handler
-    application.add_handler(MessageHandler(filters.ALL, handle_message))
-
-    # Run the bot
-    application.run_polling()
+    logging.info("Starting bot...")
+    bot.polling()
 
 if __name__ == "__main__":
     main()
