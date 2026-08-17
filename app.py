@@ -1,9 +1,17 @@
 from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from contextlib import asynccontextmanager
 import telebot
 import requests
 import os
+import uuid
+import json
 from dotenv import load_dotenv
+from sqlalchemy import create_engine, Column, String, Integer
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
 # Load environment variables from .env file
 load_dotenv()
@@ -16,6 +24,25 @@ BOT_USERNAME = os.getenv("TELEGRAM_BOT_USERNAME")
 
 # Set your ngrok URL here (or use environment variable)
 WEBHOOK_URL = os.getenv("WEBHOOK_URL", "https://your-ngrok-url.ngrok.io")
+
+# Database setup
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///drooble.db")  # Fallback to SQLite
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+# Tournament model
+class Tournament(Base):
+    __tablename__ = "tournaments"
+    
+    id = Column(String, primary_key=True)  # UUID
+    chat_id = Column(String)
+    num_players = Column(Integer)
+    players = Column(String)  # JSON string of player data
+    status = Column(String)
+
+# Create tables
+Base.metadata.create_all(bind=engine)
 
 # Lifespan context manager for startup events
 @asynccontextmanager
@@ -36,36 +63,57 @@ async def lifespan(app: FastAPI):
 # Initialize FastAPI app with lifespan
 app = FastAPI(lifespan=lifespan)
 
+# Setup templates
+templates = Jinja2Templates(directory="templates")
+
 # Create the bot
 bot = telebot.TeleBot(TOKEN)
+
+# Tournament state storage
+tournaments = {}  # chat_id -> tournament info
 
 # Handler for /start command
 @bot.message_handler(commands=['start'])
 def handle_start(message):
     """Handle /start command with welcome message and buttons"""
-    user_name = message.from_user.first_name
-    if message.from_user.last_name:
-        user_name += f" {message.from_user.last_name}"
+    chat_type = message.chat.type
     
-    welcome_text = f"Welcome {user_name}! 🎮\n\nChoose how you want to play:"
-    
-    # Create inline keyboard
-    markup = telebot.types.InlineKeyboardMarkup()
-    single_player_btn = telebot.types.InlineKeyboardButton("Single Player", callback_data="single_player")
-    
-    # URL button that opens Telegram's add to group feature
-    if BOT_USERNAME:
-        add_to_group_btn = telebot.types.InlineKeyboardButton(
-            "Add Drooble to group", 
-            url=f"https://t.me/{BOT_USERNAME}?startgroup=true"
-        )
+    # Check if the message is from a group chat
+    if chat_type in ['group', 'supergroup']:
+        # Group chat welcome message
+        welcome_text = "🏆 Welcome to Drooble! Ready to start a tournament?"
+        
+        # Create inline keyboard for group
+        markup = telebot.types.InlineKeyboardMarkup()
+        create_tournament_btn = telebot.types.InlineKeyboardButton("Create tournament", callback_data="create_tournament")
+        markup.add(create_tournament_btn)
+        
+        bot.reply_to(message, welcome_text, reply_markup=markup)
     else:
-        # Fallback if username not set
-        add_to_group_btn = telebot.types.InlineKeyboardButton("Add Drooble to group", callback_data="add_to_group")
-    
-    markup.add(single_player_btn, add_to_group_btn)
-    
-    bot.reply_to(message, welcome_text, reply_markup=markup)
+        # Private chat welcome message
+        user_name = message.from_user.first_name
+        if message.from_user.last_name:
+            user_name += f" {message.from_user.last_name}"
+        
+        welcome_text = f"Welcome {user_name}! 🎮\n\nChoose how you want to play:"
+        
+        # Create inline keyboard
+        markup = telebot.types.InlineKeyboardMarkup()
+        single_player_btn = telebot.types.InlineKeyboardButton("Single Player", callback_data="single_player")
+        
+        # URL button that opens Telegram's add to group feature
+        if BOT_USERNAME:
+            add_to_group_btn = telebot.types.InlineKeyboardButton(
+                "Add Drooble to group", 
+                url=f"https://t.me/{BOT_USERNAME}?startgroup=true"
+            )
+        else:
+            # Fallback if username not set
+            add_to_group_btn = telebot.types.InlineKeyboardButton("Add Drooble to group", callback_data="add_to_group")
+        
+        markup.add(single_player_btn, add_to_group_btn)
+        
+        bot.reply_to(message, welcome_text, reply_markup=markup)
 
 # Handler for button clicks
 @bot.callback_query_handler(func=lambda call: True)
@@ -77,6 +125,119 @@ def handle_button_click(call):
     elif call.data == "add_to_group":
         bot.answer_callback_query(call.id, "Add me to a group!")
         bot.send_message(call.message.chat.id, "To add me to a group:\n\n1. Open your group chat\n2. Click the group name\n3. Go to 'Members'\n4. Click 'Add Member'\n5. Search for @DroobleBot\n6. Select me and add! 🤖")
+    elif call.data == "create_tournament":
+        bot.answer_callback_query(call.id, "Creating tournament!")
+        show_player_selection(call.message.chat.id, call.message.message_id)
+    elif call.data.startswith("players_"):
+        # Extract the number of players from callback data
+        num_players = int(call.data.split("_")[1])
+        bot.answer_callback_query(call.id, f"Selected {num_players} players!")
+        create_tournament(call.message.chat.id, call.message.message_id, num_players)
+    elif call.data == "join_tournament":
+        bot.answer_callback_query(call.id, "Joining tournament!")
+        join_tournament(call.message.chat.id, call.from_user, call.message.message_id)
+
+def show_player_selection(chat_id, message_id):
+    """Show player/slot selection buttons"""
+    text = "🎯 How many players/slots for the tournament?"
+    
+    markup = telebot.types.InlineKeyboardMarkup()
+    markup.row(
+        telebot.types.InlineKeyboardButton("2", callback_data="players_2"),
+        telebot.types.InlineKeyboardButton("4", callback_data="players_4")
+    )
+    markup.row(
+        telebot.types.InlineKeyboardButton("6", callback_data="players_6"),
+        telebot.types.InlineKeyboardButton("8", callback_data="players_8")
+    )
+    markup.row(
+        telebot.types.InlineKeyboardButton("10", callback_data="players_10")
+    )
+    
+    bot.edit_message_text(text, chat_id, message_id, reply_markup=markup)
+
+def create_tournament(chat_id, message_id, num_players):
+    """Create a new tournament and show join button"""
+    # Initialize tournament state
+    tournaments[chat_id] = {
+        'num_players': num_players,
+        'players': [],
+        'status': 'waiting'
+    }
+    
+    text = f"🏆 Tournament created!\n\nSlots: {num_players}\nJoined: 0/{num_players}\n\nClick below to join:"
+    
+    markup = telebot.types.InlineKeyboardMarkup()
+    join_btn = telebot.types.InlineKeyboardButton("Join Tournament", callback_data="join_tournament")
+    markup.add(join_btn)
+    
+    bot.edit_message_text(text, chat_id, message_id, reply_markup=markup)
+
+def join_tournament(chat_id, user, message_id):
+    """Add a player to the tournament"""
+    if chat_id not in tournaments:
+        bot.send_message(chat_id, "No active tournament in this group!")
+        return
+    
+    tournament = tournaments[chat_id]
+    
+    # Check if tournament is full
+    if len(tournament['players']) >= tournament['num_players']:
+        bot.answer_callback_query("Tournament is full!")
+        return
+    
+    # Check if user already joined
+    for player in tournament['players']:
+        if player['id'] == user.id:
+            bot.answer_callback_query("You already joined!")
+            return
+    
+    # Add player to tournament
+    tournament['players'].append({
+        'id': user.id,
+        'name': user.first_name
+    })
+    
+    # Update the message
+    current_players = len(tournament['players'])
+    total_players = tournament['num_players']
+    
+    if current_players >= total_players:
+        # Tournament is full - create database entry and generate link
+        tournament['status'] = 'full'
+        tournament_id = str(uuid.uuid4())
+        
+        # Save to database
+        session = SessionLocal()
+        try:
+            db_tournament = Tournament(
+                id=tournament_id,
+                chat_id=str(chat_id),
+                num_players=total_players,
+                players=json.dumps(tournament['players']),
+                status='full'
+            )
+            session.add(db_tournament)
+            session.commit()
+        finally:
+            session.close()
+        
+        # Generate tournament link for Telegram Web App
+        tournament_link = f"{WEBHOOK_URL}/tournament/{tournament_id}"
+        
+        text = f"🏆 Tournament is full!\n\nPlayers: {current_players}/{total_players}\n\nTournament started!"
+        
+        # Create Telegram Web App button
+        markup = telebot.types.InlineKeyboardMarkup()
+        web_app_btn = telebot.types.InlineKeyboardButton(text="View Bracket", web_app=telebot.types.WebAppInfo(url=tournament_link))
+        markup.add(web_app_btn)
+    else:
+        text = f"🏆 Tournament created!\n\nSlots: {total_players}\nJoined: {current_players}/{total_players}\n\nClick below to join:"
+        markup = telebot.types.InlineKeyboardMarkup()
+        join_btn = telebot.types.InlineKeyboardButton("Join Tournament", callback_data="join_tournament")
+        markup.add(join_btn)
+    
+    bot.edit_message_text(text, chat_id, message_id, reply_markup=markup)
 
 # Handler for other messages
 @bot.message_handler(func=lambda message: True)
@@ -97,6 +258,35 @@ async def webhook(request: Request):
 @app.get("/")
 async def health():
     return {"status": "healthy"}
+
+# Tournament page endpoint
+@app.get("/tournament/{tournament_id}", response_class=HTMLResponse)
+async def tournament_page(request: Request, tournament_id: str):
+    """Serve the tournament page"""
+    session = SessionLocal()
+    try:
+        tournament = session.query(Tournament).filter(Tournament.id == tournament_id).first()
+        if not tournament:
+            return HTMLResponse("Tournament not found", status_code=404)
+        
+        players = json.loads(tournament.players)
+        
+        # Create matchups (simple pairing)
+        matchups = []
+        for i in range(0, len(players), 2):
+            if i + 1 < len(players):
+                matchups.append({
+                    'player1': players[i]['name'],
+                    'player2': players[i+1]['name']
+                })
+        
+        return templates.TemplateResponse("tournament.html", {
+            "request": request,
+            "tournament_id": tournament_id,
+            "matchups": matchups
+        })
+    finally:
+        session.close()
 
 if __name__ == "__main__":
     import uvicorn
