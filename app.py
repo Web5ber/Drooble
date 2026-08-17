@@ -106,16 +106,52 @@ class ConnectionManager:
         
         # Get all users in this tournament
         users = []
-        for connection in self.active_connections[tournament_id]:
+        connections_to_remove = []
+        
+        for connection in list(self.active_connections[tournament_id]):  # Convert to list to avoid modification during iteration
             if connection in self.connection_users:
                 users.append(self.connection_users[connection])
         
         # Broadcast to all connections
-        for connection in self.active_connections[tournament_id]:
+        for connection in list(self.active_connections[tournament_id]):  # Convert to list to avoid modification during iteration
             try:
                 await connection.send_json({
                     "type": "users_update",
                     "users": users
+                })
+            except:
+                # Connection might be broken, mark for removal
+                connections_to_remove.append(connection)
+        
+        # Remove broken connections
+        for connection in connections_to_remove:
+            self.active_connections[tournament_id].discard(connection)
+    
+    async def broadcast_game_move(self, tournament_id: str, move_data: dict):
+        if tournament_id not in self.active_connections:
+            return
+        
+        # Broadcast move to all connections in this tournament
+        for connection in self.active_connections[tournament_id]:
+            try:
+                await connection.send_json({
+                    "type": "game_move",
+                    **move_data
+                })
+            except:
+                # Connection might be broken, remove it
+                self.active_connections[tournament_id].discard(connection)
+    
+    async def broadcast_game_reset(self, tournament_id: str):
+        if tournament_id not in self.active_connections:
+            return
+        
+        # Broadcast reset to all connections in this tournament
+        for connection in self.active_connections[tournament_id]:
+            try:
+                await connection.send_json({
+                    "type": "game_reset",
+                    "tournament_id": tournament_id
                 })
             except:
                 # Connection might be broken, remove it
@@ -386,7 +422,24 @@ async def websocket_endpoint(websocket: WebSocket, tournament_id: str):
         while True:
             # Keep connection alive and handle incoming messages
             data = await websocket.receive_text()
-            # You can handle client messages here if needed
+            message = json.loads(data)
+            
+            print(f"Received WebSocket message: {message}")
+            
+            # Handle different message types
+            if message.get("type") == "game_move":
+                # Broadcast game move to all players in tournament
+                print(f"Broadcasting game move: index={message.get('index')}, player={message.get('player')}")
+                await manager.broadcast_game_move(tournament_id, {
+                    "index": message.get("index"),
+                    "player": message.get("player"),
+                    "tournament_id": tournament_id
+                })
+            elif message.get("type") == "game_reset":
+                # Broadcast game reset to all players in tournament
+                print(f"Broadcasting game reset")
+                await manager.broadcast_game_reset(tournament_id)
+                
     except WebSocketDisconnect:
         manager.disconnect(websocket, tournament_id)
         await manager.broadcast_users(tournament_id)
