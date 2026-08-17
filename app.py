@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine, Column, String, Integer
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from typing import Dict, Set
 
 # Load environment variables from .env file
 load_dotenv()
@@ -71,6 +72,56 @@ bot = telebot.TeleBot(TOKEN)
 
 # Tournament state storage
 tournaments = {}  # chat_id -> tournament info
+
+# WebSocket connection management
+class ConnectionManager:
+    def __init__(self):
+        # Store connections by tournament_id
+        self.active_connections: Dict[str, Set[WebSocket]] = {}
+        # Store user info by connection
+        self.connection_users: Dict[WebSocket, dict] = {}
+    
+    async def connect(self, websocket: WebSocket, tournament_id: str, user_info: dict):
+        await websocket.accept()
+        if tournament_id not in self.active_connections:
+            self.active_connections[tournament_id] = set()
+        self.active_connections[tournament_id].add(websocket)
+        self.connection_users[websocket] = user_info
+        
+        # Broadcast updated user list to all connections in this tournament
+        await self.broadcast_users(tournament_id)
+    
+    def disconnect(self, websocket: WebSocket, tournament_id: str):
+        if tournament_id in self.active_connections:
+            self.active_connections[tournament_id].discard(websocket)
+            if not self.active_connections[tournament_id]:
+                del self.active_connections[tournament_id]
+        
+        if websocket in self.connection_users:
+            del self.connection_users[websocket]
+    
+    async def broadcast_users(self, tournament_id: str):
+        if tournament_id not in self.active_connections:
+            return
+        
+        # Get all users in this tournament
+        users = []
+        for connection in self.active_connections[tournament_id]:
+            if connection in self.connection_users:
+                users.append(self.connection_users[connection])
+        
+        # Broadcast to all connections
+        for connection in self.active_connections[tournament_id]:
+            try:
+                await connection.send_json({
+                    "type": "users_update",
+                    "users": users
+                })
+            except:
+                # Connection might be broken, remove it
+                self.active_connections[tournament_id].discard(connection)
+
+manager = ConnectionManager()
 
 # Handler for /start command
 @bot.message_handler(commands=['start'])
@@ -309,10 +360,36 @@ async def tournament_api(tournament_id: str):
         
         return {
             "tournament_id": tournament_id,
-            "matchups": matchups
+            "matchups": matchups,
+            "players": players
         }
     finally:
         session.close()
+
+# WebSocket endpoint for real-time user status
+@app.websocket("/ws/{tournament_id}")
+async def websocket_endpoint(websocket: WebSocket, tournament_id: str):
+    """Handle WebSocket connections for tournament participants"""
+    # Get user info from query parameters
+    user_name = websocket.query_params.get("user_name", "Anonymous")
+    user_id = websocket.query_params.get("user_id", str(uuid.uuid4()))
+    
+    user_info = {
+        "id": user_id,
+        "name": user_name,
+        "online": True
+    }
+    
+    await manager.connect(websocket, tournament_id, user_info)
+    
+    try:
+        while True:
+            # Keep connection alive and handle incoming messages
+            data = await websocket.receive_text()
+            # You can handle client messages here if needed
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, tournament_id)
+        await manager.broadcast_users(tournament_id)
 
 if __name__ == "__main__":
     import uvicorn
