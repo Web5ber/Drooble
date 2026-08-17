@@ -11,7 +11,7 @@ try {
     
     # Start the FastAPI app
     Write-Host "Starting FastAPI app..."
-    python app.py
+    .\.venv\Scripts\python.exe app.py
 }
 catch {
     Write-Host "Error getting ngrok URL: $_"

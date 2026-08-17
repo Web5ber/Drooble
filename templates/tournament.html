@@ -59,17 +59,10 @@
 <body>
     <div class="container">
         <h1>🏆 Drooble Tournament</h1>
-        <div class="status">
-            Tournament ID: {{ tournament_id }}
+        <div class="status" id="status">
+            Loading tournament...
         </div>
         <div id="matchups">
-            {% for matchup in matchups %}
-            <div class="matchup">
-                <div class="player">{{ matchup.player1 }}</div>
-                <div class="vs">VS</div>
-                <div class="player">{{ matchup.player2 }}</div>
-            </div>
-            {% endfor %}
         </div>
     </div>
     <script>
@@ -81,6 +74,48 @@
         
         // Set up theme changes
         tg.ready();
+        
+        // Get tournament ID from URL parameters (Telegram uses tgWebAppStartParam)
+        const urlParams = new URLSearchParams(window.location.search);
+        const tournamentId = urlParams.get('tgWebAppStartParam');
+        
+        if (tournamentId) {
+            // Fetch tournament data from API
+            fetch(`/api/tournament/${tournamentId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Tournament not found');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    document.getElementById('status').innerHTML = `Tournament ID: ${data.tournament_id}`;
+                    
+                    const matchupsDiv = document.getElementById('matchups');
+                    matchupsDiv.innerHTML = '';
+                    
+                    if (data.matchups && data.matchups.length > 0) {
+                        data.matchups.forEach(matchup => {
+                            const matchupDiv = document.createElement('div');
+                            matchupDiv.className = 'matchup';
+                            matchupDiv.innerHTML = `
+                                <div class="player">${matchup.player1}</div>
+                                <div class="vs">VS</div>
+                                <div class="player">${matchup.player2}</div>
+                            `;
+                            matchupsDiv.appendChild(matchupDiv);
+                        });
+                    } else {
+                        matchupsDiv.innerHTML = '<div class="status">No matchups available</div>';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('status').innerHTML = 'Error loading tournament';
+                    console.error('Error:', error);
+                });
+        } else {
+            document.getElementById('status').innerHTML = 'No tournament ID provided';
+        }
     </script>
 </body>
 </html>

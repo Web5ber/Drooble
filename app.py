@@ -198,6 +198,8 @@ def join_tournament(chat_id, user, message_id):
         'name': user.first_name
     })
     
+    print(f"Player {user.first_name} joined. Total players: {len(tournament['players'])}/{tournament['num_players']}")
+    
     # Update the message
     current_players = len(tournament['players'])
     total_players = tournament['num_players']
@@ -219,25 +221,34 @@ def join_tournament(chat_id, user, message_id):
             )
             session.add(db_tournament)
             session.commit()
+            print(f"Tournament {tournament_id} saved to database")
+        except Exception as e:
+            print(f"Database error: {e}")
+            session.rollback()
         finally:
             session.close()
         
-        # Generate tournament link for Telegram Web App
-        tournament_link = f"{WEBHOOK_URL}/tournament/{tournament_id}"
+        # Update group message with Mini App launch link
+        webapp_url = f"https://t.me/PlayDroobleBot/Drooble?startapp={tournament_id}"
+        text = f"🏆 Tournament is full!\n\nPlayers: {current_players}/{total_players}\n\nTournament started! Click below to view the bracket:"
         
-        text = f"🏆 Tournament is full!\n\nPlayers: {current_players}/{total_players}\n\nTournament started!"
-        
-        # Create Telegram Web App button
         markup = telebot.types.InlineKeyboardMarkup()
-        web_app_btn = telebot.types.InlineKeyboardButton(text="View Bracket", web_app=telebot.types.WebAppInfo(url=tournament_link))
-        markup.add(web_app_btn)
+        webapp_btn = telebot.types.InlineKeyboardButton(
+            text="🎮 View Bracket",
+            url=webapp_url
+        )
+        markup.add(webapp_btn)
     else:
         text = f"🏆 Tournament created!\n\nSlots: {total_players}\nJoined: {current_players}/{total_players}\n\nClick below to join:"
         markup = telebot.types.InlineKeyboardMarkup()
         join_btn = telebot.types.InlineKeyboardButton("Join Tournament", callback_data="join_tournament")
         markup.add(join_btn)
     
-    bot.edit_message_text(text, chat_id, message_id, reply_markup=markup)
+    try:
+        bot.edit_message_text(text, chat_id, message_id, reply_markup=markup)
+        print("Message updated successfully")
+    except Exception as e:
+        print(f"Error updating message: {e}")
 
 # Handler for other messages
 @bot.message_handler(func=lambda message: True)
@@ -255,19 +266,35 @@ async def webhook(request: Request):
     return {"status": "ok"}
 
 # Health check endpoint
-@app.get("/")
+@app.get("/health")
 async def health():
     return {"status": "healthy"}
+
+# Root endpoint - serves the tournament page
+@app.get("/", response_class=HTMLResponse)
+async def root(request: Request):
+    """Serve the tournament page as the main WebApp entry point"""
+    return templates.TemplateResponse("tournament.html", {
+        "request": request
+    })
 
 # Tournament page endpoint
 @app.get("/tournament/{tournament_id}", response_class=HTMLResponse)
 async def tournament_page(request: Request, tournament_id: str):
     """Serve the tournament page"""
+    return templates.TemplateResponse("tournament.html", {
+        "request": request
+    })
+
+# Tournament API endpoint (returns JSON data)
+@app.get("/api/tournament/{tournament_id}")
+async def tournament_api(tournament_id: str):
+    """Return tournament data as JSON"""
     session = SessionLocal()
     try:
         tournament = session.query(Tournament).filter(Tournament.id == tournament_id).first()
         if not tournament:
-            return HTMLResponse("Tournament not found", status_code=404)
+            return {"error": "Tournament not found"}, 404
         
         players = json.loads(tournament.players)
         
@@ -280,11 +307,10 @@ async def tournament_page(request: Request, tournament_id: str):
                     'player2': players[i+1]['name']
                 })
         
-        return templates.TemplateResponse("tournament.html", {
-            "request": request,
+        return {
             "tournament_id": tournament_id,
             "matchups": matchups
-        })
+        }
     finally:
         session.close()
 

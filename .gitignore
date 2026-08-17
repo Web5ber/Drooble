@@ -1,6 +1,10 @@
 # Environment variables
 .env
 
+# Database
+*.db
+drooble.db
+
 # Python
 __pycache__/
 *.py[cod]
