@@ -113,60 +113,15 @@
             border-radius: 8px;
             font-weight: 500;
         }
-        .my-symbol-badge {
-            display: inline-block;
-            margin-left: 8px;
-            padding: 2px 10px;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 700;
-            background-color: var(--tg-theme-hint-color, #888);
-            color: white;
-        }
-        .tic-tac-toe {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            max-width: 300px;
-            margin: 15px auto;
-        }
-        .tic-tac-toe.not-your-turn {
-            opacity: 0.6;
-        }
-        .cell {
-            aspect-ratio: 1;
-            background-color: var(--tg-theme-button-color, #007bff);
-            border-radius: 8px;
+        .game-links {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 32px;
-            font-weight: bold;
-            color: var(--tg-theme-button-text-color, white);
-            cursor: pointer;
-            transition: all 0.2s;
+            flex-direction: column;
+            gap: 10px;
         }
-        .cell:hover:not(.taken) {
-            transform: scale(1.05);
-        }
-        .cell.taken {
-            cursor: not-allowed;
-            opacity: 0.8;
-        }
-        .tic-tac-toe.not-your-turn .cell:not(.taken) {
-            cursor: not-allowed;
-        }
-        .tic-tac-toe.not-your-turn .cell:hover:not(.taken) {
-            transform: none;
-        }
-        .cell.x {
-            background-color: #ff6b6b;
-        }
-        .cell.o {
-            background-color: #4ecdc4;
-        }
-        .game-controls {
-            margin-top: 15px;
+        .game-links a {
+            display: block;
+            margin: 10px 0;
+            text-decoration: none;
         }
         .btn {
             padding: 10px 20px;
@@ -180,10 +135,6 @@
         }
         .btn:hover {
             background-color: var(--tg-theme-button-color, #0056b3);
-        }
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
         }
     </style>
 </head>
@@ -199,24 +150,17 @@
             </div>
         </div>
         <div class="game-section disabled" id="game-section">
-            <h3>🎮 Tic Tac Toe</h3>
+            <h3>🎮 Available Games</h3>
             <div class="game-status" id="game-status">
                 Waiting for all players to come online...
-                <span class="my-symbol-badge" id="my-symbol-badge" style="display:none;"></span>
             </div>
-            <div class="tic-tac-toe" id="tic-tac-toe">
-                <div class="cell" data-index="0"></div>
-                <div class="cell" data-index="1"></div>
-                <div class="cell" data-index="2"></div>
-                <div class="cell" data-index="3"></div>
-                <div class="cell" data-index="4"></div>
-                <div class="cell" data-index="5"></div>
-                <div class="cell" data-index="6"></div>
-                <div class="cell" data-index="7"></div>
-                <div class="cell" data-index="8"></div>
-            </div>
-            <div class="game-controls">
-                <button class="btn" id="reset-game" disabled>Reset Game</button>
+            <div class="game-links" id="game-links" style="display: none;">
+                <a href="/tictactoe?tgWebAppStartParam={{ tournament_id }}" class="btn" style="display: block; margin: 10px 0; text-decoration: none;">
+                    🎮 Play Tic Tac Toe
+                </a>
+                <a href="/rockpaperscissors?tgWebAppStartParam={{ tournament_id }}" class="btn" style="display: block; margin: 10px 0; text-decoration: none;">
+                    🪨 Play Rock Paper Scissors
+                </a>
             </div>
         </div>
         <div id="matchups">
@@ -243,21 +187,8 @@
         
         let ws = null;
         let gameState = {
-            board: Array(9).fill(null),
-            currentPlayer: 'X',
-            gameActive: false,
-            players: [],
-            currentTurnIndex: 0,
-            myPlayerIndex: -1, // Track which player index this user is
-            mySymbol: null     // 'X' or 'O', derived from myPlayerIndex
+            players: []
         };
- 
-        // Player index 0 is always X, player index 1 is always O.
-        // This mapping never changes during a game, so it's a stable way
-        // to check "is this move actually mine to make".
-        function symbolForIndex(playerIndex) {
-            return playerIndex === 0 ? 'X' : 'O';
-        }
         
         if (tournamentId) {
             // Fetch tournament data from API
@@ -289,14 +220,23 @@
                         matchupsDiv.innerHTML = '<div class="status">No matchups available</div>';
                     }
                     
+                    // Update game links with tournament ID
+                    const gameLinks = document.getElementById('game-links');
+                    const tictactoeLink = gameLinks.querySelector('a[href*="tictactoe"]');
+                    const rpsLink = gameLinks.querySelector('a[href*="rockpaperscissors"]');
+                    
+                    if (tictactoeLink) {
+                        tictactoeLink.href = `/tictactoe?tgWebAppStartParam=${data.tournament_id}`;
+                    }
+                    if (rpsLink) {
+                        rpsLink.href = `/rockpaperscissors?tgWebAppStartParam=${data.tournament_id}`;
+                    }
+                    
                     // Store tournament players for game logic
                     gameState.players = data.players || [];
                     
                     // Connect to WebSocket for real-time user status
                     connectWebSocket();
-                    
-                    // Initialize game UI
-                    initializeGame();
                 })
                 .catch(error => {
                     document.getElementById('status').innerHTML = 'Error loading tournament';
@@ -311,7 +251,6 @@
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = `${protocol}//${window.location.host}/ws/${tournamentId}?user_name=${encodeURIComponent(userName)}&user_id=${userId}`;
             
-            console.log('Connecting to WebSocket:', wsUrl);
             ws = new WebSocket(wsUrl);
             
             ws.onopen = function() {
@@ -323,10 +262,6 @@
                 
                 if (data.type === 'users_update') {
                     updateUserList(data.users);
-                } else if (data.type === 'game_move') {
-                    handleGameMove(data);
-                } else if (data.type === 'game_reset') {
-                    resetGameUI();
                 }
             };
             
@@ -346,6 +281,7 @@
             const userListDiv = document.getElementById('user-list');
             const gameSection = document.getElementById('game-section');
             const gameStatus = document.getElementById('game-status');
+            const gameLinks = document.getElementById('game-links');
             
             if (users && users.length > 0) {
                 onlineUsersDiv.style.display = 'block';
@@ -369,234 +305,21 @@
                 
                 if (allPlayersOnline && users.length >= 2) {
                     gameSection.classList.remove('disabled');
-                    
-                    // Determine this user's player index from tournament players (not online users)
-                    if (gameState.myPlayerIndex === -1) {
-                        const myPlayerIndex = gameState.players.findIndex(p => p.id.toString() === userId.toString());
-                        if (myPlayerIndex !== -1) {
-                            gameState.myPlayerIndex = myPlayerIndex;
-                            gameState.mySymbol = symbolForIndex(myPlayerIndex);
-                            const badge = document.getElementById('my-symbol-badge');
-                            badge.textContent = `You are ${gameState.mySymbol}`;
-                            badge.style.display = 'inline-block';
-                        }
-                    }
-                    
-                    if (!gameState.gameActive) {
-                        gameState.gameActive = true; // Actually activate the game
-                        document.getElementById('reset-game').disabled = false;
-                    }
-                    updateGameStatus();
+                    gameStatus.textContent = 'All players online! Choose a game to play:';
+                    gameLinks.style.display = 'block';
                 } else {
                     gameSection.classList.add('disabled');
                     gameStatus.textContent = `Waiting for all players to come online (${users.length}/${gameState.players.length})`;
-                    document.getElementById('reset-game').disabled = true;
+                    gameLinks.style.display = 'none';
                 }
             } else {
                 onlineUsersDiv.style.display = 'none';
                 gameSection.classList.add('disabled');
                 gameStatus.textContent = 'Waiting for players to come online...';
-                document.getElementById('reset-game').disabled = true;
+                gameLinks.style.display = 'none';
             }
         }
         
-        function initializeGame() {
-            const cells = document.querySelectorAll('.cell');
-            cells.forEach(cell => {
-                cell.addEventListener('click', handleCellClick);
-            });
-            
-            document.getElementById('reset-game').addEventListener('click', resetGame);
-        }
-        
-        function handleCellClick(e) {
-            const index = parseInt(e.target.dataset.index);
- 
-            // Basic sanity checks: game running, cell open, we know who we are.
-            if (!gameState.gameActive) {
-                return;
-            }
-            if (gameState.board[index]) {
-                return; // cell already taken
-            }
-            if (gameState.myPlayerIndex === -1 || !gameState.mySymbol) {
-                return; // we haven't been assigned a player slot yet
-            }
- 
-            // Turn enforcement: it must be our slot's turn, AND the symbol
-            // we'd be placing must actually be our assigned symbol. Checking
-            // both catches cases where currentPlayer/currentTurnIndex could
-            // otherwise drift out of sync.
-            if (gameState.myPlayerIndex !== gameState.currentTurnIndex) {
-                return; // not our turn
-            }
-            if (gameState.currentPlayer !== gameState.mySymbol) {
-                return; // shouldn't happen if index check passed, but stay safe
-            }
- 
-            makeMove(index, gameState.mySymbol);
-        }
-        
-        function makeMove(index, player) {
-            gameState.board[index] = player;
-            
-            // Update UI
-            const cell = document.querySelector(`[data-index="${index}"]`);
-            cell.textContent = player;
-            cell.classList.add('taken', player.toLowerCase());
-            
-            // Send move to server
-            // NOTE: this message is a request, not a fact. The server should
-            // independently track whose turn it is for this tournament and
-            // ignore/reject any game_move that doesn't match, rather than
-            // trusting the "player" field the client sends.
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
-                    type: 'game_move',
-                    index: index,
-                    player: player,
-                    tournament_id: tournamentId
-                }));
-            }
-            
-            // Check for winner
-            if (checkWinner()) {
-                gameState.gameActive = false;
-                document.getElementById('game-status').textContent = `${player} wins! 🎉`;
-                return;
-            }
-            
-            // Check for draw
-            if (gameState.board.every(cell => cell !== null)) {
-                gameState.gameActive = false;
-                document.getElementById('game-status').textContent = "It's a draw! 🤝";
-                return;
-            }
-            
-            // Switch player
-            gameState.currentPlayer = gameState.currentPlayer === 'X' ? 'O' : 'X';
-            gameState.currentTurnIndex = (gameState.currentTurnIndex + 1) % 2;
-            updateGameStatus();
-        }
-        
-        function handleGameMove(data) {
-            if (data.tournament_id !== tournamentId) return;
- 
-            // Guard against a stale/duplicate broadcast for a cell we already filled.
-            if (gameState.board[data.index]) return;
- 
-            // Trust that the server has already validated this move belongs
-            // to the correct turn; the client just renders it and advances.
-            gameState.board[data.index] = data.player;
-            
-            const cell = document.querySelector(`[data-index="${data.index}"]`);
-            cell.textContent = data.player;
-            cell.classList.add('taken', data.player.toLowerCase());
- 
-            gameState.currentPlayer = data.player === 'X' ? 'O' : 'X';
-            gameState.currentTurnIndex = (gameState.currentTurnIndex + 1) % 2;
-            
-            if (checkWinner()) {
-                gameState.gameActive = false;
-                document.getElementById('game-status').textContent = `${data.player} wins! 🎉`;
-                return;
-            }
-            
-            if (gameState.board.every(cell => cell !== null)) {
-                gameState.gameActive = false;
-                document.getElementById('game-status').textContent = "It's a draw! 🤝";
-                return;
-            }
-            
-            updateGameStatus();
-        }
-        
-        function checkWinner() {
-            const winPatterns = [
-                [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
-                [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
-                [0, 4, 8], [2, 4, 6] // diagonals
-            ];
-            
-            for (const pattern of winPatterns) {
-                const [a, b, c] = pattern;
-                if (gameState.board[a] && 
-                    gameState.board[a] === gameState.board[b] && 
-                    gameState.board[a] === gameState.board[c]) {
-                    return true;
-                }
-            }
-            return false;
-        }
-        
-        function updateGameStatus() {
-            const boardEl = document.getElementById('tic-tac-toe');
-            const badge = document.getElementById('my-symbol-badge');
- 
-            if (!gameState.gameActive) {
-                boardEl.classList.remove('not-your-turn');
-                return;
-            }
- 
-            const isMyTurn = gameState.myPlayerIndex === gameState.currentTurnIndex;
-            boardEl.classList.toggle('not-your-turn', !isMyTurn);
- 
-            const currentPlayerName = gameState.players[gameState.currentTurnIndex]?.name || gameState.currentPlayer;
- 
-            const statusEl = document.getElementById('game-status');
-            if (isMyTurn) {
-                statusEl.firstChild
-                    ? (statusEl.childNodes[0].textContent = `Your turn (${gameState.currentPlayer})`)
-                    : (statusEl.textContent = `Your turn (${gameState.currentPlayer})`);
-            } else {
-                statusEl.childNodes[0]
-                    ? (statusEl.childNodes[0].textContent = `${currentPlayerName}'s turn (${gameState.currentPlayer})`)
-                    : (statusEl.textContent = `${currentPlayerName}'s turn (${gameState.currentPlayer})`);
-            }
-            // Re-append the symbol badge since we only touched the text node above
-            if (badge && !statusEl.contains(badge)) {
-                statusEl.appendChild(badge);
-            }
-        }
-        
-        function resetGame() {
-            gameState.board = Array(9).fill(null);
-            gameState.currentPlayer = 'X';
-            gameState.gameActive = true;
-            gameState.currentTurnIndex = 0;
-            // Keep myPlayerIndex/mySymbol — those are stable for the whole
-            // tournament match, they shouldn't reset each game.
-            
-            resetGameUI();
-            
-            // Notify other players
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
-                    type: 'game_reset',
-                    tournament_id: tournamentId
-                }));
-            }
-            
-            updateGameStatus();
-        }
-        
-        function resetGameUI() {
-            const cells = document.querySelectorAll('.cell');
-            cells.forEach(cell => {
-                cell.textContent = '';
-                cell.classList.remove('taken', 'x', 'o');
-            });
-            
-            gameState.board = Array(9).fill(null);
-            gameState.currentPlayer = 'X';
-            gameState.gameActive = true;
-            gameState.currentTurnIndex = 0;
-            // Keep myPlayerIndex/mySymbol on reset too.
-            
-            updateGameStatus();
-        }
-        
-        // Clean up WebSocket connection when page closes
         window.addEventListener('beforeunload', function() {
             if (ws) {
                 ws.close();

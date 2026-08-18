@@ -147,15 +147,60 @@ class ConnectionManager:
             return
         
         # Broadcast reset to all connections in this tournament
-        for connection in self.active_connections[tournament_id]:
+        connections_to_remove = []
+        for connection in list(self.active_connections[tournament_id]):  # Convert to list to avoid modification during iteration
             try:
                 await connection.send_json({
                     "type": "game_reset",
                     "tournament_id": tournament_id
                 })
             except:
-                # Connection might be broken, remove it
-                self.active_connections[tournament_id].discard(connection)
+                # Connection might be broken, mark for removal
+                connections_to_remove.append(connection)
+        
+        # Remove broken connections
+        for connection in connections_to_remove:
+            self.active_connections[tournament_id].discard(connection)
+    
+    async def broadcast_rps_choice(self, tournament_id: str, choice_data: dict):
+        if tournament_id not in self.active_connections:
+            return
+        
+        # Broadcast RPS choice to all connections in this tournament
+        connections_to_remove = []
+        for connection in list(self.active_connections[tournament_id]):  # Convert to list to avoid modification during iteration
+            try:
+                await connection.send_json({
+                    "type": "rps_choice",
+                    **choice_data
+                })
+            except:
+                # Connection might be broken, mark for removal
+                connections_to_remove.append(connection)
+        
+        # Remove broken connections
+        for connection in connections_to_remove:
+            self.active_connections[tournament_id].discard(connection)
+    
+    async def broadcast_rps_reset(self, tournament_id: str):
+        if tournament_id not in self.active_connections:
+            return
+        
+        # Broadcast RPS reset to all connections in this tournament
+        connections_to_remove = []
+        for connection in list(self.active_connections[tournament_id]):  # Convert to list to avoid modification during iteration
+            try:
+                await connection.send_json({
+                    "type": "rps_reset",
+                    "tournament_id": tournament_id
+                })
+            except:
+                # Connection might be broken, mark for removal
+                connections_to_remove.append(connection)
+        
+        # Remove broken connections
+        for connection in connections_to_remove:
+            self.active_connections[tournament_id].discard(connection)
 
 manager = ConnectionManager()
 
@@ -365,6 +410,22 @@ async def root(request: Request):
         "request": request
     })
 
+# Tic Tac Toe game endpoint
+@app.get("/tictactoe", response_class=HTMLResponse)
+async def tictactoe(request: Request):
+    """Serve the Tic Tac Toe game"""
+    return templates.TemplateResponse("tictactoe.html", {
+        "request": request
+    })
+
+# Rock Paper Scissors game endpoint
+@app.get("/rockpaperscissors", response_class=HTMLResponse)
+async def rockpaperscissors(request: Request):
+    """Serve the Rock Paper Scissors game"""
+    return templates.TemplateResponse("rockpaperscissors.html", {
+        "request": request
+    })
+
 # Tournament page endpoint
 @app.get("/tournament/{tournament_id}", response_class=HTMLResponse)
 async def tournament_page(request: Request, tournament_id: str):
@@ -439,6 +500,18 @@ async def websocket_endpoint(websocket: WebSocket, tournament_id: str):
                 # Broadcast game reset to all players in tournament
                 print(f"Broadcasting game reset")
                 await manager.broadcast_game_reset(tournament_id)
+            elif message.get("type") == "rps_choice":
+                # Broadcast RPS choice to all players in tournament
+                print(f"Broadcasting RPS choice: choice={message.get('choice')}, player_id={message.get('player_id')}")
+                await manager.broadcast_rps_choice(tournament_id, {
+                    "choice": message.get("choice"),
+                    "player_id": message.get("player_id"),
+                    "tournament_id": tournament_id
+                })
+            elif message.get("type") == "rps_reset":
+                # Broadcast RPS reset to all players in tournament
+                print(f"Broadcasting RPS reset")
+                await manager.broadcast_rps_reset(tournament_id)
                 
     except WebSocketDisconnect:
         manager.disconnect(websocket, tournament_id)
