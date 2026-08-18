@@ -111,10 +111,25 @@
             opacity: 0.5;
             cursor: not-allowed;
         }
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 0;
+            margin-bottom: 10px;
+            color: var(--tg-theme-link-color, var(--tg-theme-button-color, #007bff));
+            font-size: 15px;
+            font-weight: 500;
+            text-decoration: none;
+        }
+        .back-btn:hover {
+            opacity: 0.8;
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <a href="#" id="back-btn" class="back-btn" style="display: none;">← Back to Tournament</a>
         <h1>🎮 Rock Paper Scissors</h1>
         <div class="game-section disabled" id="game-section">
             <div class="game-status" id="game-status">
@@ -146,6 +161,12 @@
         // Get tournament ID from URL parameters (Telegram uses tgWebAppStartParam)
         const urlParams = new URLSearchParams(window.location.search);
         const tournamentId = urlParams.get('tgWebAppStartParam');
+
+        const backBtn = document.getElementById('back-btn');
+        if (backBtn && tournamentId) {
+            backBtn.href = `/?tgWebAppStartParam=${tournamentId}`;
+            backBtn.style.display = 'inline-flex';
+        }
         
         // Get user info from Telegram WebApp
         const user = tg.initDataUnsafe?.user || {};
@@ -307,6 +328,7 @@
             const opponentChoice = gameState.opponentChoice;
             
             let result = '';
+            let winnerId = null;
             
             if (myChoice === opponentChoice) {
                 result = `It's a tie! Both chose ${choiceEmojis[myChoice]}`;
@@ -316,12 +338,35 @@
                 (myChoice === 'scissors' && opponentChoice === 'paper')
             ) {
                 result = `You win! ${choiceEmojis[myChoice]} beats ${choiceEmojis[opponentChoice]}`;
+                winnerId = userId;
             } else {
                 result = `You lose! ${choiceEmojis[opponentChoice]} beats ${choiceEmojis[myChoice]}`;
+                const opponent = gameState.players.find(p => p.id.toString() !== userId.toString());
+                winnerId = opponent ? opponent.id : null;
             }
             
             document.getElementById('result-display').textContent = result;
             gameState.gameActive = false;
+
+            if (winnerId !== null) {
+                reportGameWin(winnerId);
+            }
+        }
+
+        function reportGameWin(winnerId) {
+            const playerIds = gameState.players.map(p => p.id.toString()).sort();
+            if (playerIds.length < 2 || userId.toString() !== playerIds[0]) {
+                return;
+            }
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'game_result',
+                    game: 'rockpaperscissors',
+                    winner_id: winnerId,
+                    tournament_id: tournamentId
+                }));
+            }
         }
         
         function updateGameStatus() {

@@ -9,10 +9,10 @@ import os
 import uuid
 import json
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, Column, String, Integer
+from sqlalchemy import create_engine, Column, String, Integer, inspect, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from typing import Dict, Set
+from typing import Dict, Set, Optional
 
 # Load environment variables from .env file
 load_dotenv()
@@ -41,9 +41,66 @@ class Tournament(Base):
     num_players = Column(Integer)
     players = Column(String)  # JSON string of player data
     status = Column(String)
+    scores = Column(String, default="{}")  # JSON: player_id -> win count
 
 # Create tables
 Base.metadata.create_all(bind=engine)
+
+def ensure_scores_column():
+    """Add scores column to existing databases."""
+    inspector = inspect(engine)
+    if "tournaments" not in inspector.get_table_names():
+        return
+    columns = [col["name"] for col in inspector.get_columns("tournaments")]
+    if "scores" not in columns:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE tournaments ADD COLUMN scores VARCHAR DEFAULT '{}'"))
+            conn.commit()
+
+ensure_scores_column()
+
+def get_scoreboard(tournament: Tournament) -> list:
+    """Build sorted scoreboard with player names and win counts."""
+    players = json.loads(tournament.players)
+    scores = json.loads(tournament.scores or "{}")
+    scoreboard = []
+    for player in players:
+        player_id = str(player["id"])
+        scoreboard.append({
+            "id": player_id,
+            "name": player["name"],
+            "wins": scores.get(player_id, 0)
+        })
+    scoreboard.sort(key=lambda entry: entry["wins"], reverse=True)
+    return scoreboard
+
+def record_win(tournament_id: str, winner_id: str) -> Optional[list]:
+    """Increment a player's win count and return the updated scoreboard."""
+    session = SessionLocal()
+    try:
+        tournament = session.query(Tournament).filter(Tournament.id == tournament_id).first()
+        if not tournament:
+            return None
+
+        players = json.loads(tournament.players)
+        player_ids = {str(player["id"]) for player in players}
+        winner_id = str(winner_id)
+        if winner_id not in player_ids:
+            return None
+
+        scores = json.loads(tournament.scores or "{}")
+        for player_id in player_ids:
+            scores.setdefault(player_id, 0)
+        scores[winner_id] = scores.get(winner_id, 0) + 1
+        tournament.scores = json.dumps(scores)
+        session.commit()
+        return get_scoreboard(tournament)
+    except Exception as e:
+        print(f"Error recording win: {e}")
+        session.rollback()
+        return None
+    finally:
+        session.close()
 
 # Lifespan context manager for startup events
 @asynccontextmanager
@@ -202,6 +259,24 @@ class ConnectionManager:
         for connection in connections_to_remove:
             self.active_connections[tournament_id].discard(connection)
 
+    async def broadcast_scoreboard(self, tournament_id: str, scoreboard: list):
+        if tournament_id not in self.active_connections:
+            return
+
+        connections_to_remove = []
+        for connection in list(self.active_connections[tournament_id]):
+            try:
+                await connection.send_json({
+                    "type": "scoreboard_update",
+                    "tournament_id": tournament_id,
+                    "scoreboard": scoreboard
+                })
+            except:
+                connections_to_remove.append(connection)
+
+        for connection in connections_to_remove:
+            self.active_connections[tournament_id].discard(connection)
+
 manager = ConnectionManager()
 
 # Handler for /start command
@@ -344,12 +419,14 @@ def join_tournament(chat_id, user, message_id):
         # Save to database
         session = SessionLocal()
         try:
+            initial_scores = {str(player["id"]): 0 for player in tournament["players"]}
             db_tournament = Tournament(
                 id=tournament_id,
                 chat_id=str(chat_id),
                 num_players=total_players,
                 players=json.dumps(tournament['players']),
-                status='full'
+                status='full',
+                scores=json.dumps(initial_scores)
             )
             session.add(db_tournament)
             session.commit()
@@ -458,7 +535,8 @@ async def tournament_api(tournament_id: str):
         return {
             "tournament_id": tournament_id,
             "matchups": matchups,
-            "players": players
+            "players": players,
+            "scoreboard": get_scoreboard(tournament)
         }
     finally:
         session.close()
@@ -512,6 +590,14 @@ async def websocket_endpoint(websocket: WebSocket, tournament_id: str):
                 # Broadcast RPS reset to all players in tournament
                 print(f"Broadcasting RPS reset")
                 await manager.broadcast_rps_reset(tournament_id)
+            elif message.get("type") == "game_result":
+                winner_id = message.get("winner_id")
+                game = message.get("game")
+                if winner_id and game:
+                    print(f"Recording win: game={game}, winner_id={winner_id}")
+                    scoreboard = record_win(tournament_id, winner_id)
+                    if scoreboard is not None:
+                        await manager.broadcast_scoreboard(tournament_id, scoreboard)
                 
     except WebSocketDisconnect:
         manager.disconnect(websocket, tournament_id)

@@ -136,6 +136,46 @@
         .btn:hover {
             background-color: var(--tg-theme-button-color, #0056b3);
         }
+        .scoreboard {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            border-radius: 10px;
+        }
+        .scoreboard h3 {
+            margin: 0 0 12px 0;
+            color: var(--tg-theme-heading-color, #333);
+            font-size: 16px;
+            text-align: center;
+        }
+        .scoreboard-leader {
+            text-align: center;
+            margin-bottom: 12px;
+            padding: 10px;
+            background-color: var(--tg-theme-bg-color, #fff);
+            border-radius: 8px;
+            font-weight: 600;
+            color: var(--tg-theme-text-color, #333);
+        }
+        .score-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            margin: 6px 0;
+            background-color: var(--tg-theme-bg-color, #fff);
+            border-radius: 8px;
+        }
+        .score-row.leader {
+            border-left: 4px solid #FFD700;
+        }
+        .score-name {
+            font-weight: 600;
+        }
+        .score-wins {
+            font-weight: 700;
+            color: var(--tg-theme-button-color, #007bff);
+        }
     </style>
 </head>
 <body>
@@ -148,6 +188,11 @@
             <h3>🟢 Online Participants</h3>
             <div class="user-list" id="user-list">
             </div>
+        </div>
+        <div class="scoreboard" id="scoreboard" style="display: none;">
+            <h3>📊 Scoreboard</h3>
+            <div class="scoreboard-leader" id="scoreboard-leader">No games played yet</div>
+            <div id="scoreboard-list"></div>
         </div>
         <div class="game-section disabled" id="game-section">
             <h3>🎮 Available Games</h3>
@@ -234,7 +279,8 @@
                     
                     // Store tournament players for game logic
                     gameState.players = data.players || [];
-                    
+                    renderScoreboard(data.scoreboard || []);
+
                     // Connect to WebSocket for real-time user status
                     connectWebSocket();
                 })
@@ -262,6 +308,8 @@
                 
                 if (data.type === 'users_update') {
                     updateUserList(data.users);
+                } else if (data.type === 'scoreboard_update') {
+                    renderScoreboard(data.scoreboard || []);
                 }
             };
             
@@ -318,6 +366,44 @@
                 gameStatus.textContent = 'Waiting for players to come online...';
                 gameLinks.style.display = 'none';
             }
+        }
+
+        function renderScoreboard(scoreboard) {
+            const scoreboardDiv = document.getElementById('scoreboard');
+            const leaderDiv = document.getElementById('scoreboard-leader');
+            const listDiv = document.getElementById('scoreboard-list');
+
+            if (!scoreboard || scoreboard.length === 0) {
+                scoreboardDiv.style.display = 'none';
+                return;
+            }
+
+            scoreboardDiv.style.display = 'block';
+            listDiv.innerHTML = '';
+
+            const topWins = scoreboard[0].wins;
+            const leaders = scoreboard.filter(entry => entry.wins === topWins && topWins > 0);
+
+            if (topWins === 0) {
+                leaderDiv.textContent = 'No games played yet';
+            } else if (leaders.length > 1) {
+                leaderDiv.textContent = `Tied for the lead: ${leaders.map(entry => entry.name).join(', ')} (${topWins} win${topWins === 1 ? '' : 's'})`;
+            } else {
+                leaderDiv.textContent = `🏆 ${leaders[0].name} is winning (${topWins} win${topWins === 1 ? '' : 's'})`;
+            }
+
+            scoreboard.forEach((entry, index) => {
+                const row = document.createElement('div');
+                row.className = 'score-row';
+                if (index === 0 && topWins > 0) {
+                    row.classList.add('leader');
+                }
+                row.innerHTML = `
+                    <span class="score-name">${index + 1}. ${entry.name}</span>
+                    <span class="score-wins">${entry.wins} win${entry.wins === 1 ? '' : 's'}</span>
+                `;
+                listDiv.appendChild(row);
+            });
         }
         
         window.addEventListener('beforeunload', function() {

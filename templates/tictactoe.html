@@ -119,10 +119,25 @@
             opacity: 0.5;
             cursor: not-allowed;
         }
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 0;
+            margin-bottom: 10px;
+            color: var(--tg-theme-link-color, var(--tg-theme-button-color, #007bff));
+            font-size: 15px;
+            font-weight: 500;
+            text-decoration: none;
+        }
+        .back-btn:hover {
+            opacity: 0.8;
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <a href="#" id="back-btn" class="back-btn" style="display: none;">← Back to Tournament</a>
         <h1>🎮 Tic Tac Toe</h1>
         <div class="game-section disabled" id="game-section">
             <div class="game-status" id="game-status">
@@ -158,6 +173,12 @@
         // Get tournament ID from URL parameters (Telegram uses tgWebAppStartParam)
         const urlParams = new URLSearchParams(window.location.search);
         const tournamentId = urlParams.get('tgWebAppStartParam');
+
+        const backBtn = document.getElementById('back-btn');
+        if (backBtn && tournamentId) {
+            backBtn.href = `/?tgWebAppStartParam=${tournamentId}`;
+            backBtn.style.display = 'inline-flex';
+        }
         
         // Get user info from Telegram WebApp
         const user = tg.initDataUnsafe?.user || {};
@@ -321,6 +342,7 @@
             if (checkWinner()) {
                 gameState.gameActive = false;
                 document.getElementById('game-status').textContent = `${player} wins! 🎉`;
+                reportGameWin(player);
                 return;
             }
             
@@ -376,10 +398,25 @@
                 if (gameState.board[a] && 
                     gameState.board[a] === gameState.board[b] && 
                     gameState.board[a] === gameState.board[c]) {
-                    return true;
+                    return gameState.board[a];
                 }
             }
-            return false;
+            return null;
+        }
+
+        function reportGameWin(winningSymbol) {
+            const winnerIndex = winningSymbol === 'X' ? 0 : 1;
+            const winner = gameState.players[winnerIndex];
+            if (!winner || !ws || ws.readyState !== WebSocket.OPEN) {
+                return;
+            }
+
+            ws.send(JSON.stringify({
+                type: 'game_result',
+                game: 'tictactoe',
+                winner_id: winner.id,
+                tournament_id: tournamentId
+            }));
         }
         
         function updateGameStatus() {
