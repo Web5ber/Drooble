@@ -15,7 +15,13 @@ try {
     Write-Host "Press Ctrl+C to stop ngrok."
     
     # Keep the script running to maintain ngrok
-    Wait-Process -Id $ngrokProcess.Id
+    while ($true) {
+        if ($ngrokProcess.HasExited) {
+            Write-Host "Ngrok process has exited."
+            break
+        }
+        Start-Sleep -Seconds 1
+    }
 }
 catch {
     Write-Host "Error getting ngrok URL: $_"

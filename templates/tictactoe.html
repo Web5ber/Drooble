@@ -5,233 +5,408 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tic Tac Toe</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            /* Same token system as the puzzle race, so the two games feel like one product. */
+            --bg: #0b0e17;
+            --panel-solid: #161c2b;
+            --lane: #1b2233;
+            --lane-border: #2a3348;
+            --ink: #eef1f8;
+            --ink-dim: #8e97ad;
+            --go: #35d68a;      /* O */
+            --amber: #ffb703;   /* highlights / turn indicator */
+            --danger: #ff5d5d;  /* X */
+            --tile: #1a2135;
+            --tile-border: #2a3348;
+            --radius: 14px;
+            --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --font-mono: 'Space Mono', 'SFMono-Regular', Consolas, monospace;
+        }
+ 
+        * { box-sizing: border-box; }
+ 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: var(--font-display);
             max-width: 100%;
             margin: 0;
-            padding: 20px;
-            background-color: var(--tg-theme-bg-color, #f5f5f5);
-            color: var(--tg-theme-text-color, #333);
+            padding: 18px;
+            background:
+                radial-gradient(circle at 15% -10%, rgba(53,214,138,0.10), transparent 45%),
+                radial-gradient(circle at 100% 0%, rgba(255,93,93,0.08), transparent 40%),
+                var(--tg-theme-bg-color, var(--bg));
+            color: var(--tg-theme-text-color, var(--ink));
+            min-height: 100vh;
         }
+ 
         .container {
-            background-color: var(--tg-theme-secondary-bg-color, white);
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            background-color: var(--tg-theme-secondary-bg-color, var(--panel-solid));
+            padding: 22px 18px 26px;
+            border-radius: 20px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+            border: 1px solid rgba(255,255,255,0.05);
         }
-        h1 {
-            color: var(--tg-theme-heading-color, #333);
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .game-section {
-            margin: 20px 0;
-            padding: 20px;
-            background-color: var(--tg-theme-secondary-bg-color, #f0f0f0);
-            border-radius: 10px;
-            text-align: center;
-        }
-        .game-section.disabled {
-            opacity: 0.5;
-            pointer-events: none;
-        }
-        .game-section h3 {
-            margin: 0 0 15px 0;
-            color: var(--tg-theme-heading-color, #333);
-        }
-        .game-status {
-            margin: 10px 0;
-            padding: 10px;
-            background-color: var(--tg-theme-bg-color, #fff);
-            border-radius: 8px;
-            font-weight: 500;
-        }
-        .my-symbol-badge {
-            display: inline-block;
-            margin-left: 8px;
-            padding: 2px 10px;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 700;
-            background-color: var(--tg-theme-hint-color, #888);
-            color: white;
-        }
-        .tic-tac-toe {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            max-width: 300px;
-            margin: 15px auto;
-        }
-        .tic-tac-toe.not-your-turn {
-            opacity: 0.6;
-        }
-        .cell {
-            aspect-ratio: 1;
-            background-color: var(--tg-theme-button-color, #007bff);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 32px;
-            font-weight: bold;
-            color: var(--tg-theme-button-text-color, white);
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .cell:hover:not(.taken) {
-            transform: scale(1.05);
-        }
-        .cell.taken {
-            cursor: not-allowed;
-            opacity: 0.8;
-        }
-        .tic-tac-toe.not-your-turn .cell:not(.taken) {
-            cursor: not-allowed;
-        }
-        .tic-tac-toe.not-your-turn .cell:hover:not(.taken) {
-            transform: none;
-        }
-        .cell.x {
-            background-color: #ff6b6b;
-        }
-        .cell.o {
-            background-color: #4ecdc4;
-        }
-        .game-controls {
-            margin-top: 15px;
-        }
-        .btn {
-            padding: 10px 20px;
-            background-color: var(--tg-theme-button-color, #007bff);
-            color: var(--tg-theme-button-text-color, white);
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .btn:hover {
-            background-color: var(--tg-theme-button-color, #0056b3);
-        }
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
+ 
         .back-btn {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 8px 0;
-            margin-bottom: 10px;
-            color: var(--tg-theme-link-color, var(--tg-theme-button-color, #007bff));
-            font-size: 15px;
-            font-weight: 500;
+            padding: 6px 0;
+            margin-bottom: 6px;
+            color: var(--tg-theme-link-color, var(--go));
+            font-size: 14px;
+            font-weight: 600;
             text-decoration: none;
         }
-        .back-btn:hover {
-            opacity: 0.8;
+        .back-btn:hover { opacity: 0.8; }
+        .back-btn:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; border-radius: 4px; }
+ 
+        .flag-strip {
+            height: 6px;
+            border-radius: 4px;
+            margin: 4px 0 18px;
+            background-image: repeating-linear-gradient(90deg, var(--ink) 0 8px, transparent 8px 16px);
+            opacity: 0.18;
+        }
+ 
+        h1 {
+            color: var(--tg-theme-heading-color, var(--ink));
+            text-align: center;
+            margin: 0 0 4px;
+            font-size: 22px;
+            letter-spacing: -0.02em;
+        }
+        .subtitle {
+            text-align: center;
+            color: var(--tg-theme-hint-color, var(--ink-dim));
+            font-size: 13px;
+            margin-bottom: 18px;
+        }
+ 
+        .game-section {
+            margin: 18px 0 4px;
+            padding: 16px 14px 20px;
+            border-radius: var(--radius);
+            transition: opacity 0.25s ease;
+        }
+        .game-section.disabled { opacity: 0.55; pointer-events: none; }
+ 
+        .players-row {
+            display: flex;
+            align-items: stretch;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .player-badge {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--lane);
+            border: 1px solid var(--lane-border);
+            border-radius: 12px;
+            padding: 10px 12px;
+            min-width: 0;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .player-badge.x-side { border-color: rgba(255,93,93,0.2); }
+        .player-badge.o-side { border-color: rgba(53,214,138,0.2); flex-direction: row-reverse; text-align: right; }
+        .player-badge.active.x-side { border-color: var(--danger); box-shadow: 0 0 0 1px rgba(255,93,93,0.35); }
+        .player-badge.active.o-side { border-color: var(--go); box-shadow: 0 0 0 1px rgba(53,214,138,0.35); }
+ 
+        .symbol-chip {
+            width: 30px; height: 30px;
+            flex-shrink: 0;
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-family: var(--font-mono);
+            font-weight: 700;
+            font-size: 15px;
+            color: #0b0e17;
+        }
+        .x-side .symbol-chip { background: var(--danger); }
+        .o-side .symbol-chip { background: var(--go); }
+ 
+        .badge-name {
+            font-size: 12.5px;
+            font-weight: 600;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .badge-meta {
+            font-size: 10px;
+            color: var(--ink-dim);
+            font-family: var(--font-mono);
+        }
+ 
+        .game-status {
+            text-align: center;
+            margin-bottom: 16px;
+            font-weight: 600;
+            font-size: 13.5px;
+            letter-spacing: 0.01em;
+            color: var(--tg-theme-hint-color, var(--ink-dim));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 18px;
+        }
+        .status-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--danger);
+            animation: pulse 1.6s infinite;
+            flex-shrink: 0;
+        }
+        .status-dot.ready { background: var(--go); }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 currentColor; }
+            70% { box-shadow: 0 0 0 6px transparent; }
+            100% { box-shadow: 0 0 0 0 transparent; }
+        }
+ 
+        .tic-tac-toe {
+            position: relative;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            max-width: 280px;
+            margin: 0 auto;
+            transition: opacity 0.2s ease;
+        }
+        .tic-tac-toe.not-your-turn { opacity: 0.55; }
+ 
+        .cell {
+            aspect-ratio: 1;
+            background: linear-gradient(155deg, var(--tile), #151b2c);
+            border: 1px solid var(--tile-border);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-mono);
+            font-size: 34px;
+            font-weight: 700;
+            color: var(--ink);
+            cursor: pointer;
+            box-shadow: 0 2px 0 rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04);
+            transition: transform 0.12s ease, background 0.15s ease, border-color 0.2s ease;
+        }
+        .cell:hover:not(.taken) { background: linear-gradient(155deg, #232c46, #1a2135); }
+        .cell:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+        .cell.taken { cursor: not-allowed; }
+        .cell.placed { animation: pop 0.2s ease; }
+        @keyframes pop {
+            0% { transform: scale(0.7); opacity: 0.4; }
+            60% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .tic-tac-toe.not-your-turn .cell:not(.taken) { cursor: not-allowed; }
+        .tic-tac-toe.not-your-turn .cell:hover:not(.taken) { transform: none; background: linear-gradient(155deg, var(--tile), #151b2c); }
+ 
+        .cell.x { color: var(--danger); }
+        .cell.o { color: var(--go); }
+        .cell.win-cell {
+            border-color: var(--amber);
+            box-shadow: 0 0 0 1px var(--amber), inset 0 1px 0 rgba(255,255,255,0.08);
+        }
+ 
+        .game-controls { text-align: center; margin-top: 20px; }
+        .btn {
+            padding: 12px 28px;
+            background-color: var(--tg-theme-button-color, var(--go));
+            color: var(--tg-theme-button-text-color, #0b0e17);
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 700;
+            font-family: var(--font-display);
+            cursor: pointer;
+            transition: transform 0.12s ease, opacity 0.15s ease;
+        }
+        .btn:hover:not(:disabled) { transform: translateY(-1px); }
+        .btn:active:not(:disabled) { transform: translateY(0); }
+        .btn:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+ 
+        .winner-announcement {
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+            font-size: 18px;
+            font-weight: 700;
+            margin: 16px 0 4px;
+            padding: 16px;
+            border-radius: var(--radius);
+            display: none;
+            background: linear-gradient(135deg, var(--go), #1fae6d);
+            color: #0b0e17;
+        }
+        .winner-announcement.lose { background: linear-gradient(135deg, var(--lane), var(--lane-border)); color: var(--ink); }
+        .winner-announcement.draw { background: linear-gradient(135deg, var(--amber), #d99a02); color: #0b0e17; }
+        .winner-announcement.show { display: block; }
+ 
+        .confetti-piece {
+            position: absolute;
+            top: -10px;
+            width: 6px; height: 10px;
+            opacity: 0.9;
+            animation: fall 1.4s ease-in forwards;
+            border-radius: 1px;
+        }
+        @keyframes fall { to { transform: translateY(120px) rotate(280deg); opacity: 0; } }
+ 
+        @media (prefers-reduced-motion: reduce) {
+            .cell, .status-dot, .confetti-piece, .tic-tac-toe { animation: none !important; transition: none !important; }
+        }
+ 
+        @media (max-width: 380px) {
+            .tic-tac-toe { max-width: 240px; }
+            .cell { font-size: 28px; }
+            .badge-name { font-size: 11.5px; }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <a href="#" id="back-btn" class="back-btn" style="display: none;">← Back to Tournament</a>
-        <h1>🎮 Tic Tac Toe</h1>
+        <a href="#" id="back-btn" class="back-btn" style="display: none;">&larr; Back to Tournament</a>
+        <div class="flag-strip"></div>
+        <h1>Tic Tac Toe</h1>
+        <p class="subtitle">Three in a row, any direction, wins.</p>
+ 
         <div class="game-section disabled" id="game-section">
+            <div class="players-row">
+                <div class="player-badge x-side" id="badge-x">
+                    <div class="symbol-chip">X</div>
+                    <div>
+                        <div class="badge-name" id="name-x">Player 1</div>
+                        <div class="badge-meta">Goes first</div>
+                    </div>
+                </div>
+                <div class="player-badge o-side" id="badge-o">
+                    <div class="symbol-chip">O</div>
+                    <div>
+                        <div class="badge-name" id="name-o">Player 2</div>
+                        <div class="badge-meta">Goes second</div>
+                    </div>
+                </div>
+            </div>
+ 
             <div class="game-status" id="game-status">
-                Waiting for all players to come online...
-                <span class="my-symbol-badge" id="my-symbol-badge" style="display:none;"></span>
+                <span class="status-dot" id="status-dot"></span>
+                <span id="status-text">Waiting for all players to come online&hellip;</span>
             </div>
+ 
             <div class="tic-tac-toe" id="tic-tac-toe">
-                <div class="cell" data-index="0"></div>
-                <div class="cell" data-index="1"></div>
-                <div class="cell" data-index="2"></div>
-                <div class="cell" data-index="3"></div>
-                <div class="cell" data-index="4"></div>
-                <div class="cell" data-index="5"></div>
-                <div class="cell" data-index="6"></div>
-                <div class="cell" data-index="7"></div>
-                <div class="cell" data-index="8"></div>
+                <div class="cell" data-index="0" role="button" tabindex="0" aria-label="Cell 1"></div>
+                <div class="cell" data-index="1" role="button" tabindex="0" aria-label="Cell 2"></div>
+                <div class="cell" data-index="2" role="button" tabindex="0" aria-label="Cell 3"></div>
+                <div class="cell" data-index="3" role="button" tabindex="0" aria-label="Cell 4"></div>
+                <div class="cell" data-index="4" role="button" tabindex="0" aria-label="Cell 5"></div>
+                <div class="cell" data-index="5" role="button" tabindex="0" aria-label="Cell 6"></div>
+                <div class="cell" data-index="6" role="button" tabindex="0" aria-label="Cell 7"></div>
+                <div class="cell" data-index="7" role="button" tabindex="0" aria-label="Cell 8"></div>
+                <div class="cell" data-index="8" role="button" tabindex="0" aria-label="Cell 9"></div>
             </div>
+ 
+            <div class="winner-announcement" id="winner-announcement"></div>
+ 
             <div class="game-controls">
-                <button class="btn" id="reset-game" disabled>Reset Game</button>
+                <button class="btn" id="reset-game" disabled>Play Again</button>
             </div>
         </div>
     </div>
+ 
     <script>
-        // Initialize Telegram Web App
         const tg = window.Telegram.WebApp;
-        
-        // Expand the web app to full height
-        tg.expand();
-        
-        // Set up theme changes
         tg.ready();
-        
-        // Get tournament ID from URL parameters (Telegram uses tgWebAppStartParam)
+        tg.expand();
+        try { tg.setHeaderColor && tg.setHeaderColor('secondary_bg_color'); } catch (e) {}
+ 
         const urlParams = new URLSearchParams(window.location.search);
         const tournamentId = urlParams.get('tgWebAppStartParam');
-
+ 
         const backBtn = document.getElementById('back-btn');
         if (backBtn && tournamentId) {
             backBtn.href = `/?tgWebAppStartParam=${tournamentId}`;
             backBtn.style.display = 'inline-flex';
         }
-        
-        // Get user info from Telegram WebApp
+ 
         const user = tg.initDataUnsafe?.user || {};
         const userName = user.first_name || 'Anonymous';
         const userId = user.id || Math.random().toString(36).substr(2, 9);
-        
+ 
         let ws = null;
+        let reconnectAttempts = 0;
+ 
         let gameState = {
             board: Array(9).fill(null),
             currentPlayer: 'X',
             gameActive: false,
+            gameEnded: false,
             players: [],
             currentTurnIndex: 0,
             myPlayerIndex: -1,
             mySymbol: null
         };
  
+        const WIN_PATTERNS = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
+        ];
+ 
         function symbolForIndex(playerIndex) {
             return playerIndex === 0 ? 'X' : 'O';
         }
-        
+ 
+        function haptic(type) {
+            try {
+                if (type === 'success') tg.HapticFeedback?.notificationOccurred('success');
+                else if (type === 'error') tg.HapticFeedback?.notificationOccurred('error');
+                else tg.HapticFeedback?.impactOccurred('light');
+            } catch (e) {}
+        }
+ 
         if (tournamentId) {
-            // Fetch tournament data from API
             fetch(`/api/tournament/${tournamentId}`)
                 .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Tournament not found');
-                    }
+                    if (!response.ok) throw new Error('Tournament not found');
                     return response.json();
                 })
                 .then(data => {
                     gameState.players = data.players || [];
+                    if (gameState.players[0]) document.getElementById('name-x').textContent = gameState.players[0].name;
+                    if (gameState.players[1]) document.getElementById('name-o').textContent = gameState.players[1].name;
                     connectWebSocket();
                     initializeGame();
                 })
                 .catch(error => {
                     console.error('Error:', error);
+                    document.getElementById('status-text').textContent = 'Could not load this game. Try reopening it from the tournament.';
                 });
+        } else {
+            document.getElementById('status-text').textContent = 'No tournament linked — open this from your tournament page.';
         }
-        
+ 
         function connectWebSocket() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = `${protocol}//${window.location.host}/ws/${tournamentId}?user_name=${encodeURIComponent(userName)}&user_id=${userId}`;
-            
+ 
             ws = new WebSocket(wsUrl);
-            
+ 
             ws.onopen = function() {
+                reconnectAttempts = 0;
                 console.log('WebSocket connected');
             };
-            
+ 
             ws.onmessage = function(event) {
                 const data = JSON.parse(event.data);
-                
+ 
                 if (data.type === 'users_update') {
                     updateUserList(data.users);
                 } else if (data.type === 'game_move') {
@@ -240,96 +415,93 @@
                     resetGameUI();
                 }
             };
-            
+ 
             ws.onclose = function() {
-                setTimeout(connectWebSocket, 3000);
+                reconnectAttempts++;
+                const delay = Math.min(3000 * reconnectAttempts, 15000);
+                setTimeout(connectWebSocket, delay);
             };
-            
+ 
             ws.onerror = function(error) {
                 console.error('WebSocket error:', error);
             };
         }
-        
+ 
         function updateUserList(users) {
             const gameSection = document.getElementById('game-section');
-            const gameStatus = document.getElementById('game-status');
-            
+ 
             if (users && users.length > 0) {
-                const allPlayersOnline = gameState.players.length > 0 && 
-                    gameState.players.every(player => 
-                        users.some(user => user.id == player.id)
-                    );
-                
+                const allPlayersOnline = gameState.players.length > 0 &&
+                    gameState.players.every(player => users.some(u => u.id == player.id));
+ 
                 if (allPlayersOnline && users.length >= 2) {
                     gameSection.classList.remove('disabled');
-                    
+ 
                     if (gameState.myPlayerIndex === -1) {
                         const myPlayerIndex = gameState.players.findIndex(p => p.id.toString() === userId.toString());
                         if (myPlayerIndex !== -1) {
                             gameState.myPlayerIndex = myPlayerIndex;
                             gameState.mySymbol = symbolForIndex(myPlayerIndex);
-                            const badge = document.getElementById('my-symbol-badge');
-                            badge.textContent = `You are ${gameState.mySymbol}`;
-                            badge.style.display = 'inline-block';
                         }
                     }
-                    
-                    if (!gameState.gameActive) {
+ 
+                    if (!gameState.gameActive && !gameState.gameEnded) {
                         gameState.gameActive = true;
                         document.getElementById('reset-game').disabled = false;
                     }
                     updateGameStatus();
                 } else {
                     gameSection.classList.add('disabled');
-                    gameStatus.textContent = `Waiting for all players to come online (${users.length}/${gameState.players.length})`;
+                    document.getElementById('status-dot').classList.remove('ready');
+                    document.getElementById('status-text').textContent =
+                        `Waiting for all players to come online (${users.length}/${gameState.players.length})`;
                     document.getElementById('reset-game').disabled = true;
                 }
             } else {
                 gameSection.classList.add('disabled');
-                gameStatus.textContent = 'Waiting for players to come online...';
+                document.getElementById('status-dot').classList.remove('ready');
+                document.getElementById('status-text').textContent = 'Waiting for players to come online...';
                 document.getElementById('reset-game').disabled = true;
             }
         }
-        
+ 
         function initializeGame() {
-            const cells = document.querySelectorAll('.cell');
-            cells.forEach(cell => {
+            document.querySelectorAll('.cell').forEach(cell => {
                 cell.addEventListener('click', handleCellClick);
+                cell.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleCellClick(e);
+                    }
+                });
             });
-            
             document.getElementById('reset-game').addEventListener('click', resetGame);
         }
-        
+ 
         function handleCellClick(e) {
-            const index = parseInt(e.target.dataset.index);
+            const index = parseInt(e.target.closest('.cell').dataset.index);
  
-            if (!gameState.gameActive) {
-                return;
-            }
-            if (gameState.board[index]) {
-                return;
-            }
-            if (gameState.myPlayerIndex === -1 || !gameState.mySymbol) {
-                return;
-            }
- 
-            if (gameState.myPlayerIndex !== gameState.currentTurnIndex) {
-                return;
-            }
-            if (gameState.currentPlayer !== gameState.mySymbol) {
-                return;
-            }
+            if (!gameState.gameActive) return;
+            if (gameState.board[index]) return;
+            if (gameState.myPlayerIndex === -1 || !gameState.mySymbol) return;
+            if (gameState.myPlayerIndex !== gameState.currentTurnIndex) return;
+            if (gameState.currentPlayer !== gameState.mySymbol) return;
  
             makeMove(index, gameState.mySymbol);
         }
-        
-        function makeMove(index, player) {
-            gameState.board[index] = player;
-            
+ 
+        function placeMark(index, player) {
             const cell = document.querySelector(`[data-index="${index}"]`);
             cell.textContent = player;
-            cell.classList.add('taken', player.toLowerCase());
-            
+            cell.classList.add('taken', player.toLowerCase(), 'placed');
+            cell.setAttribute('aria-label', `Cell ${index + 1}, ${player}`);
+        }
+ 
+        function makeMove(index, player) {
+            gameState.board[index] = player;
+            placeMark(index, player);
+            haptic('impact');
+ 
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({
                     type: 'game_move',
@@ -338,79 +510,104 @@
                     tournament_id: tournamentId
                 }));
             }
-            
-            if (checkWinner()) {
+ 
+            resolveTurn(player);
+        }
+ 
+        function handleGameMove(data) {
+            if (data.tournament_id !== tournamentId) return;
+            if (gameState.board[data.index]) return;
+ 
+            gameState.board[data.index] = data.player;
+            placeMark(data.index, data.player);
+            resolveTurn(data.player);
+        }
+ 
+        function resolveTurn(player) {
+            const winPattern = checkWinner();
+            if (winPattern) {
                 gameState.gameActive = false;
-                document.getElementById('game-status').textContent = `${player} wins! 🎉`;
-                reportGameWin(player);
+                gameState.gameEnded = true;
+                highlightWin(winPattern);
+                announceResult(player);
+                if (player === gameState.mySymbol) reportGameWin(player);
                 return;
             }
-            
+ 
             if (gameState.board.every(cell => cell !== null)) {
                 gameState.gameActive = false;
-                document.getElementById('game-status').textContent = "It's a draw! 🤝";
+                gameState.gameEnded = true;
+                announceDraw();
                 return;
             }
-            
+ 
             gameState.currentPlayer = gameState.currentPlayer === 'X' ? 'O' : 'X';
             gameState.currentTurnIndex = (gameState.currentTurnIndex + 1) % 2;
             updateGameStatus();
         }
-        
-        function handleGameMove(data) {
-            if (data.tournament_id !== tournamentId) return;
  
-            if (gameState.board[data.index]) return;
- 
-            gameState.board[data.index] = data.player;
-            
-            const cell = document.querySelector(`[data-index="${data.index}"]`);
-            cell.textContent = data.player;
-            cell.classList.add('taken', data.player.toLowerCase());
- 
-            gameState.currentPlayer = data.player === 'X' ? 'O' : 'X';
-            gameState.currentTurnIndex = (gameState.currentTurnIndex + 1) % 2;
-            
-            if (checkWinner()) {
-                gameState.gameActive = false;
-                document.getElementById('game-status').textContent = `${data.player} wins! 🎉`;
-                return;
-            }
-            
-            if (gameState.board.every(cell => cell !== null)) {
-                gameState.gameActive = false;
-                document.getElementById('game-status').textContent = "It's a draw! 🤝";
-                return;
-            }
-            
-            updateGameStatus();
-        }
-        
         function checkWinner() {
-            const winPatterns = [
-                [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
-                [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
-                [0, 4, 8], [2, 4, 6] // diagonals
-            ];
-            
-            for (const pattern of winPatterns) {
+            for (const pattern of WIN_PATTERNS) {
                 const [a, b, c] = pattern;
-                if (gameState.board[a] && 
-                    gameState.board[a] === gameState.board[b] && 
+                if (gameState.board[a] &&
+                    gameState.board[a] === gameState.board[b] &&
                     gameState.board[a] === gameState.board[c]) {
-                    return gameState.board[a];
+                    return pattern;
                 }
             }
             return null;
         }
-
+ 
+        function highlightWin(pattern) {
+            pattern.forEach(i => document.querySelector(`[data-index="${i}"]`).classList.add('win-cell'));
+        }
+ 
+        function launchConfetti(container) {
+            const colors = ['#35d68a', '#ffb703', '#eef1f8', '#ff5d5d'];
+            for (let i = 0; i < 24; i++) {
+                const piece = document.createElement('div');
+                piece.className = 'confetti-piece';
+                piece.style.left = `${Math.random() * 100}%`;
+                piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+                piece.style.animationDelay = `${Math.random() * 0.3}s`;
+                container.appendChild(piece);
+                setTimeout(() => piece.remove(), 1800);
+            }
+        }
+ 
+        function announceResult(winningSymbol) {
+            haptic(winningSymbol === gameState.mySymbol ? 'success' : 'error');
+            const winnerName = gameState.players[winningSymbol === 'X' ? 0 : 1]?.name || `Player ${winningSymbol}`;
+            const announcement = document.getElementById('winner-announcement');
+            announcement.innerHTML = '';
+            announcement.classList.remove('draw');
+ 
+            const iWon = winningSymbol === gameState.mySymbol;
+            announcement.classList.toggle('lose', !iWon);
+            announcement.textContent = iWon ? `🏆 You win!` : `${winnerName} wins.`;
+            announcement.classList.add('show');
+            if (iWon) launchConfetti(announcement);
+ 
+            document.getElementById('status-dot').classList.remove('ready');
+            document.getElementById('status-text').textContent = `${winnerName} (${winningSymbol}) wins!`;
+            document.getElementById('tic-tac-toe').classList.remove('not-your-turn');
+        }
+ 
+        function announceDraw() {
+            haptic('impact');
+            const announcement = document.getElementById('winner-announcement');
+            announcement.classList.remove('lose');
+            announcement.classList.add('draw', 'show');
+            announcement.textContent = "It's a draw.";
+            document.getElementById('status-text').textContent = "It's a draw!";
+            document.getElementById('tic-tac-toe').classList.remove('not-your-turn');
+        }
+ 
         function reportGameWin(winningSymbol) {
             const winnerIndex = winningSymbol === 'X' ? 0 : 1;
             const winner = gameState.players[winnerIndex];
-            if (!winner || !ws || ws.readyState !== WebSocket.OPEN) {
-                return;
-            }
-
+            if (!winner || !ws || ws.readyState !== WebSocket.OPEN) return;
+ 
             ws.send(JSON.stringify({
                 type: 'game_result',
                 game: 'tictactoe',
@@ -418,77 +615,69 @@
                 tournament_id: tournamentId
             }));
         }
-        
+ 
         function updateGameStatus() {
             const boardEl = document.getElementById('tic-tac-toe');
-            const badge = document.getElementById('my-symbol-badge');
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('status-text');
+            const badgeX = document.getElementById('badge-x');
+            const badgeO = document.getElementById('badge-o');
  
             if (!gameState.gameActive) {
                 boardEl.classList.remove('not-your-turn');
                 return;
             }
  
+            statusDot.classList.add('ready');
             const isMyTurn = gameState.myPlayerIndex === gameState.currentTurnIndex;
             boardEl.classList.toggle('not-your-turn', !isMyTurn);
+            badgeX.classList.toggle('active', gameState.currentPlayer === 'X');
+            badgeO.classList.toggle('active', gameState.currentPlayer === 'O');
  
             const currentPlayerName = gameState.players[gameState.currentTurnIndex]?.name || gameState.currentPlayer;
+            statusText.textContent = isMyTurn
+                ? `Your turn (${gameState.mySymbol})`
+                : `${currentPlayerName}'s turn (${gameState.currentPlayer})`;
+        }
  
-            const statusEl = document.getElementById('game-status');
-            if (isMyTurn) {
-                statusEl.firstChild.textContent = 'Your turn (';
-                statusEl.appendChild(badge);
-                statusEl.appendChild(document.createTextNode(')'));
-            } else {
-                statusEl.textContent = `${currentPlayerName}'s turn (${gameState.currentPlayer})`;
-                statusEl.appendChild(badge);
-            }
-        }
-        
         function resetGame() {
-            gameState.board = Array(9).fill(null);
-            gameState.currentPlayer = 'X';
-            gameState.gameActive = true;
-            gameState.currentTurnIndex = 0;
-            gameState.myPlayerIndex = -1;
-            gameState.mySymbol = null;
-            
             resetGameUI();
-            
             if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
-                    type: 'game_reset',
-                    tournament_id: tournamentId
-                }));
+                ws.send(JSON.stringify({ type: 'game_reset', tournament_id: tournamentId }));
             }
-            
-            updateGameStatus();
         }
-        
+ 
         function resetGameUI() {
-            const cells = document.querySelectorAll('.cell');
-            cells.forEach(cell => {
+            document.querySelectorAll('.cell').forEach(cell => {
                 cell.textContent = '';
-                cell.classList.remove('taken', 'x', 'o');
+                cell.classList.remove('taken', 'x', 'o', 'placed', 'win-cell');
+                cell.setAttribute('aria-label', `Cell ${parseInt(cell.dataset.index) + 1}`);
             });
-            
+ 
             gameState.board = Array(9).fill(null);
             gameState.currentPlayer = 'X';
             gameState.gameActive = true;
+            gameState.gameEnded = false;
             gameState.currentTurnIndex = 0;
             gameState.myPlayerIndex = -1;
             gameState.mySymbol = null;
-            
-            const badge = document.getElementById('my-symbol-badge');
-            badge.style.display = 'none';
-            
+ 
+            const announcement = document.getElementById('winner-announcement');
+            announcement.classList.remove('show', 'lose', 'draw');
+            announcement.textContent = '';
+ 
+            document.getElementById('badge-x').classList.remove('active');
+            document.getElementById('badge-o').classList.remove('active');
+            document.getElementById('status-dot').classList.remove('ready');
+            document.getElementById('status-text').textContent = 'Reassigning players…';
+ 
             updateGameStatus();
         }
-        
+ 
         window.addEventListener('beforeunload', function() {
-            if (ws) {
-                ws.close();
-            }
+            if (ws) ws.close();
         });
     </script>
 </body>
 </html>
+ 

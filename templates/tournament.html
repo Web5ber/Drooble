@@ -200,11 +200,14 @@
                 Waiting for all players to come online...
             </div>
             <div class="game-links" id="game-links" style="display: none;">
-                <a href="/tictactoe?tgWebAppStartParam={{ tournament_id }}" class="btn" style="display: block; margin: 10px 0; text-decoration: none;">
+                <a href="/tictactoe" class="btn" style="display: block; margin: 10px 0; text-decoration: none;">
                     🎮 Play Tic Tac Toe
                 </a>
-                <a href="/rockpaperscissors?tgWebAppStartParam={{ tournament_id }}" class="btn" style="display: block; margin: 10px 0; text-decoration: none;">
+                <a href="/rockpaperscissors" class="btn" style="display: block; margin: 10px 0; text-decoration: none;">
                     🪨 Play Rock Paper Scissors
+                </a>
+                <a href="/sliding8puzzle" class="btn" style="display: block; margin: 10px 0; text-decoration: none;">
+                    🧩 Play Sliding 8 Puzzle Race
                 </a>
             </div>
         </div>
@@ -269,12 +272,16 @@
                     const gameLinks = document.getElementById('game-links');
                     const tictactoeLink = gameLinks.querySelector('a[href*="tictactoe"]');
                     const rpsLink = gameLinks.querySelector('a[href*="rockpaperscissors"]');
+                    const puzzleLink = gameLinks.querySelector('a[href*="sliding8puzzle"]');
                     
                     if (tictactoeLink) {
                         tictactoeLink.href = `/tictactoe?tgWebAppStartParam=${data.tournament_id}`;
                     }
                     if (rpsLink) {
                         rpsLink.href = `/rockpaperscissors?tgWebAppStartParam=${data.tournament_id}`;
+                    }
+                    if (puzzleLink) {
+                        puzzleLink.href = `/sliding8puzzle?tgWebAppStartParam=${data.tournament_id}`;
                     }
                     
                     // Store tournament players for game logic
@@ -355,6 +362,21 @@
                     gameSection.classList.remove('disabled');
                     gameStatus.textContent = 'All players online! Choose a game to play:';
                     gameLinks.style.display = 'block';
+                    
+                    // Update game links with tournament ID
+                    const tictactoeLink = gameLinks.querySelector('a[href*="tictactoe"]');
+                    const rpsLink = gameLinks.querySelector('a[href*="rockpaperscissors"]');
+                    const puzzleLink = gameLinks.querySelector('a[href*="sliding8puzzle"]');
+                    
+                    if (tictactoeLink) {
+                        tictactoeLink.href = `/tictactoe?tgWebAppStartParam=${tournamentId}`;
+                    }
+                    if (rpsLink) {
+                        rpsLink.href = `/rockpaperscissors?tgWebAppStartParam=${tournamentId}`;
+                    }
+                    if (puzzleLink) {
+                        puzzleLink.href = `/sliding8puzzle?tgWebAppStartParam=${tournamentId}`;
+                    }
                 } else {
                     gameSection.classList.add('disabled');
                     gameStatus.textContent = `Waiting for all players to come online (${users.length}/${gameState.players.length})`;

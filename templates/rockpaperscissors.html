@@ -5,193 +5,320 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rock Paper Scissors</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            /* Same token system as the other tournament games. */
+            --bg: #0b0e17;
+            --panel-solid: #161c2b;
+            --lane: #1b2233;
+            --lane-border: #2a3348;
+            --ink: #eef1f8;
+            --ink-dim: #8e97ad;
+            --go: #35d68a;
+            --amber: #ffb703;
+            --danger: #ff5d5d;
+            --tile: #1a2135;
+            --tile-border: #2a3348;
+            --radius: 14px;
+            --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --font-mono: 'Space Mono', 'SFMono-Regular', Consolas, monospace;
+        }
+ 
+        * { box-sizing: border-box; }
+ 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: var(--font-display);
             max-width: 100%;
             margin: 0;
-            padding: 20px;
-            background-color: var(--tg-theme-bg-color, #f5f5f5);
-            color: var(--tg-theme-text-color, #333);
+            padding: 18px;
+            background:
+                radial-gradient(circle at 15% -10%, rgba(53,214,138,0.10), transparent 45%),
+                radial-gradient(circle at 100% 0%, rgba(255,183,3,0.08), transparent 40%),
+                var(--tg-theme-bg-color, var(--bg));
+            color: var(--tg-theme-text-color, var(--ink));
+            min-height: 100vh;
         }
+ 
         .container {
-            background-color: var(--tg-theme-secondary-bg-color, white);
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            background-color: var(--tg-theme-secondary-bg-color, var(--panel-solid));
+            padding: 22px 18px 26px;
+            border-radius: 20px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+            border: 1px solid rgba(255,255,255,0.05);
         }
-        h1 {
-            color: var(--tg-theme-heading-color, #333);
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .game-section {
-            margin: 20px 0;
-            padding: 20px;
-            background-color: var(--tg-theme-secondary-bg-color, #f0f0f0);
-            border-radius: 10px;
-            text-align: center;
-        }
-        .game-section.disabled {
-            opacity: 0.5;
-            pointer-events: none;
-        }
-        .game-section h3 {
-            margin: 0 0 15px 0;
-            color: var(--tg-theme-heading-color, #333);
-        }
-        .game-status {
-            margin: 10px 0;
-            padding: 10px;
-            background-color: var(--tg-theme-bg-color, #fff);
-            border-radius: 8px;
-            font-weight: 500;
-        }
-        .rps-choices {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin: 20px 0;
-        }
-        .choice-btn {
-            width: 80px;
-            height: 80px;
-            border-radius: 15px;
-            border: none;
-            background-color: var(--tg-theme-button-color, #007bff);
-            color: var(--tg-theme-button-text-color, white);
-            font-size: 36px;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .choice-btn:hover:not(:disabled) {
-            transform: scale(1.1);
-            background-color: var(--tg-theme-button-color, #0056b3);
-        }
-        .choice-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        .choice-btn.selected {
-            background-color: #4CAF50;
-            transform: scale(1.1);
-        }
-        .result-display {
-            margin: 20px 0;
-            padding: 15px;
-            background-color: var(--tg-theme-bg-color, #fff);
-            border-radius: 10px;
-            min-height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            font-weight: bold;
-        }
-        .game-controls {
-            margin-top: 15px;
-        }
-        .btn {
-            padding: 10px 20px;
-            background-color: var(--tg-theme-button-color, #007bff);
-            color: var(--tg-theme-button-text-color, white);
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .btn:hover {
-            background-color: var(--tg-theme-button-color, #0056b3);
-        }
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
+ 
         .back-btn {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 8px 0;
-            margin-bottom: 10px;
-            color: var(--tg-theme-link-color, var(--tg-theme-button-color, #007bff));
-            font-size: 15px;
-            font-weight: 500;
+            padding: 6px 0;
+            margin-bottom: 6px;
+            color: var(--tg-theme-link-color, var(--go));
+            font-size: 14px;
+            font-weight: 600;
             text-decoration: none;
         }
-        .back-btn:hover {
-            opacity: 0.8;
+        .back-btn:hover { opacity: 0.8; }
+        .back-btn:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; border-radius: 4px; }
+ 
+        .flag-strip {
+            height: 6px;
+            border-radius: 4px;
+            margin: 4px 0 18px;
+            background-image: repeating-linear-gradient(90deg, var(--ink) 0 8px, transparent 8px 16px);
+            opacity: 0.18;
+        }
+ 
+        h1 {
+            color: var(--tg-theme-heading-color, var(--ink));
+            text-align: center;
+            margin: 0 0 4px;
+            font-size: 22px;
+            letter-spacing: -0.02em;
+        }
+        .subtitle {
+            text-align: center;
+            color: var(--tg-theme-hint-color, var(--ink-dim));
+            font-size: 13px;
+            margin-bottom: 18px;
+        }
+ 
+        .game-section {
+            margin: 18px 0 4px;
+            padding: 16px 14px 20px;
+            border-radius: var(--radius);
+            transition: opacity 0.25s ease;
+        }
+        .game-section.disabled { opacity: 0.55; pointer-events: none; }
+ 
+        .game-status {
+            text-align: center;
+            margin-bottom: 18px;
+            font-weight: 600;
+            font-size: 13.5px;
+            letter-spacing: 0.01em;
+            color: var(--tg-theme-hint-color, var(--ink-dim));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 18px;
+        }
+        .status-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--danger);
+            animation: pulse 1.6s infinite;
+            flex-shrink: 0;
+        }
+        .status-dot.ready { background: var(--go); }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 currentColor; }
+            70% { box-shadow: 0 0 0 6px transparent; }
+            100% { box-shadow: 0 0 0 0 transparent; }
+        }
+ 
+        .rps-choices {
+            display: flex;
+            justify-content: center;
+            gap: 14px;
+            margin: 8px 0 20px;
+        }
+        .choice-btn {
+            width: 78px;
+            height: 78px;
+            border-radius: 16px;
+            border: 1px solid var(--tile-border);
+            background: linear-gradient(155deg, var(--tile), #151b2c);
+            color: var(--ink);
+            font-size: 32px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 0 rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04);
+            transition: transform 0.15s ease, background 0.15s ease, border-color 0.2s ease;
+        }
+        .choice-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            background: linear-gradient(155deg, #232c46, #1a2135);
+        }
+        .choice-btn:active:not(:disabled) { transform: translateY(0) scale(0.96); }
+        .choice-btn:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
+        .choice-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .choice-btn.selected {
+            border-color: var(--go);
+            box-shadow: 0 0 0 1px var(--go), inset 0 1px 0 rgba(255,255,255,0.06);
+            transform: translateY(-2px);
+        }
+ 
+        .result-display {
+            position: relative;
+            overflow: hidden;
+            margin: 4px 0;
+            padding: 18px 16px;
+            background: var(--lane);
+            border: 1px solid var(--lane-border);
+            border-radius: var(--radius);
+            min-height: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-align: center;
+            font-size: 15px;
+            font-weight: 600;
+        }
+        .result-display.win { background: linear-gradient(135deg, var(--go), #1fae6d); color: #0b0e17; border-color: transparent; }
+        .result-display.lose { background: var(--lane); border-color: var(--lane-border); }
+        .result-display.tie { background: linear-gradient(135deg, var(--amber), #d99a02); color: #0b0e17; border-color: transparent; }
+ 
+        .reveal-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            font-size: 34px;
+        }
+        .reveal-vs {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--ink-dim);
+        }
+        .result-display.win .reveal-vs,
+        .result-display.tie .reveal-vs { color: rgba(11,14,23,0.6); }
+ 
+        .waiting-dots span {
+            display: inline-block;
+            width: 5px; height: 5px;
+            margin: 0 1px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: bounce 1.2s infinite ease-in-out;
+        }
+        .waiting-dots span:nth-child(2) { animation-delay: 0.15s; }
+        .waiting-dots span:nth-child(3) { animation-delay: 0.3s; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+            40% { transform: translateY(-4px); opacity: 1; }
+        }
+ 
+        .confetti-piece {
+            position: absolute;
+            top: -10px;
+            width: 6px; height: 10px;
+            opacity: 0.9;
+            animation: fall 1.4s ease-in forwards;
+            border-radius: 1px;
+        }
+        @keyframes fall { to { transform: translateY(120px) rotate(280deg); opacity: 0; } }
+ 
+        .game-controls { text-align: center; margin-top: 20px; }
+        .btn {
+            padding: 12px 28px;
+            background-color: var(--tg-theme-button-color, var(--go));
+            color: var(--tg-theme-button-text-color, #0b0e17);
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 700;
+            font-family: var(--font-display);
+            cursor: pointer;
+            transition: transform 0.12s ease, opacity 0.15s ease;
+        }
+        .btn:hover:not(:disabled) { transform: translateY(-1px); }
+        .btn:active:not(:disabled) { transform: translateY(0); }
+        .btn:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+ 
+        @media (prefers-reduced-motion: reduce) {
+            .status-dot, .waiting-dots span, .confetti-piece, .choice-btn { animation: none !important; transition: none !important; }
+        }
+ 
+        @media (max-width: 380px) {
+            .choice-btn { width: 66px; height: 66px; font-size: 26px; }
+            .reveal-row { font-size: 28px; gap: 10px; }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <a href="#" id="back-btn" class="back-btn" style="display: none;">← Back to Tournament</a>
-        <h1>🎮 Rock Paper Scissors</h1>
+        <a href="#" id="back-btn" class="back-btn" style="display: none;">&larr; Back to Tournament</a>
+        <div class="flag-strip"></div>
+        <h1>Rock Paper Scissors</h1>
+        <p class="subtitle">Pick one. First reveal decides the round.</p>
+ 
         <div class="game-section disabled" id="game-section">
             <div class="game-status" id="game-status">
-                Waiting for all players to come online...
+                <span class="status-dot" id="status-dot"></span>
+                <span id="status-text">Waiting for all players to come online&hellip;</span>
             </div>
+ 
             <div class="rps-choices" id="rps-choices">
-                <button class="choice-btn" data-choice="rock" disabled>🪨</button>
-                <button class="choice-btn" data-choice="paper" disabled>📄</button>
-                <button class="choice-btn" data-choice="scissors" disabled>✂️</button>
+                <button class="choice-btn" data-choice="rock" disabled aria-label="Rock">🪨</button>
+                <button class="choice-btn" data-choice="paper" disabled aria-label="Paper">📄</button>
+                <button class="choice-btn" data-choice="scissors" disabled aria-label="Scissors">✂️</button>
             </div>
+ 
             <div class="result-display" id="result-display">
                 Make your choice!
             </div>
+ 
             <div class="game-controls">
-                <button class="btn" id="reset-game" disabled>Reset Game</button>
+                <button class="btn" id="reset-game" disabled>Play Again</button>
             </div>
         </div>
     </div>
+ 
     <script>
-        // Initialize Telegram Web App
         const tg = window.Telegram.WebApp;
-        
-        // Expand the web app to full height
-        tg.expand();
-        
-        // Set up theme changes
         tg.ready();
-        
-        // Get tournament ID from URL parameters (Telegram uses tgWebAppStartParam)
+        tg.expand();
+        try { tg.setHeaderColor && tg.setHeaderColor('secondary_bg_color'); } catch (e) {}
+ 
         const urlParams = new URLSearchParams(window.location.search);
         const tournamentId = urlParams.get('tgWebAppStartParam');
-
+ 
         const backBtn = document.getElementById('back-btn');
         if (backBtn && tournamentId) {
             backBtn.href = `/?tgWebAppStartParam=${tournamentId}`;
             backBtn.style.display = 'inline-flex';
         }
-        
-        // Get user info from Telegram WebApp
+ 
         const user = tg.initDataUnsafe?.user || {};
         const userName = user.first_name || 'Anonymous';
         const userId = user.id || Math.random().toString(36).substr(2, 9);
-        
+ 
         let ws = null;
+        let reconnectAttempts = 0;
+ 
         let gameState = {
             myChoice: null,
             opponentChoice: null,
             gameActive: false,
+            roundResolved: false,
             players: [],
-            myPlayerIndex: -1
+            myPlayerIndex: -1,
+            allOnline: false
         };
-        
-        const choices = ['rock', 'paper', 'scissors'];
+ 
         const choiceEmojis = { rock: '🪨', paper: '📄', scissors: '✂️' };
-        
+ 
+        function haptic(type) {
+            try {
+                if (type === 'success') tg.HapticFeedback?.notificationOccurred('success');
+                else if (type === 'error') tg.HapticFeedback?.notificationOccurred('error');
+                else tg.HapticFeedback?.impactOccurred('light');
+            } catch (e) {}
+        }
+ 
         if (tournamentId) {
-            // Fetch tournament data from API
             fetch(`/api/tournament/${tournamentId}`)
                 .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Tournament not found');
-                    }
+                    if (!response.ok) throw new Error('Tournament not found');
                     return response.json();
                 })
                 .then(data => {
@@ -201,22 +328,26 @@
                 })
                 .catch(error => {
                     console.error('Error:', error);
+                    document.getElementById('status-text').textContent = 'Could not load this game. Try reopening it from the tournament.';
                 });
+        } else {
+            document.getElementById('status-text').textContent = 'No tournament linked — open this from your tournament page.';
         }
-        
+ 
         function connectWebSocket() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = `${protocol}//${window.location.host}/ws/${tournamentId}?user_name=${encodeURIComponent(userName)}&user_id=${userId}`;
-            
+ 
             ws = new WebSocket(wsUrl);
-            
+ 
             ws.onopen = function() {
+                reconnectAttempts = 0;
                 console.log('WebSocket connected');
             };
-            
+ 
             ws.onmessage = function(event) {
                 const data = JSON.parse(event.data);
-                
+ 
                 if (data.type === 'users_update') {
                     updateUserList(data.users);
                 } else if (data.type === 'rps_choice') {
@@ -225,37 +356,38 @@
                     resetGameUI();
                 }
             };
-            
+ 
             ws.onclose = function() {
-                setTimeout(connectWebSocket, 3000);
+                reconnectAttempts++;
+                const delay = Math.min(3000 * reconnectAttempts, 15000);
+                setTimeout(connectWebSocket, delay);
             };
-            
+ 
             ws.onerror = function(error) {
                 console.error('WebSocket error:', error);
             };
         }
-        
+ 
         function updateUserList(users) {
             const gameSection = document.getElementById('game-section');
-            const gameStatus = document.getElementById('game-status');
-            
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('status-text');
+ 
             if (users && users.length > 0) {
-                const allPlayersOnline = gameState.players.length > 0 && 
-                    gameState.players.every(player => 
-                        users.some(user => user.id == player.id)
-                    );
-                
-                if (allPlayersOnline && users.length >= 2) {
+                const allPlayersOnline = gameState.players.length > 0 &&
+                    gameState.players.every(player => users.some(u => u.id == player.id));
+                gameState.allOnline = allPlayersOnline && users.length >= 2;
+ 
+                if (gameState.allOnline) {
                     gameSection.classList.remove('disabled');
-                    
+                    statusDot.classList.add('ready');
+ 
                     if (gameState.myPlayerIndex === -1) {
                         const myPlayerIndex = gameState.players.findIndex(p => p.id.toString() === userId.toString());
-                        if (myPlayerIndex !== -1) {
-                            gameState.myPlayerIndex = myPlayerIndex;
-                        }
+                        if (myPlayerIndex !== -1) gameState.myPlayerIndex = myPlayerIndex;
                     }
-                    
-                    if (!gameState.gameActive) {
+ 
+                    if (!gameState.gameActive && !gameState.roundResolved) {
                         gameState.gameActive = true;
                         document.getElementById('reset-game').disabled = false;
                         enableChoiceButtons();
@@ -263,40 +395,38 @@
                     updateGameStatus();
                 } else {
                     gameSection.classList.add('disabled');
-                    gameStatus.textContent = `Waiting for all players to come online (${users.length}/${gameState.players.length})`;
+                    statusDot.classList.remove('ready');
+                    statusText.textContent = `Waiting for all players to come online (${users.length}/${gameState.players.length})`;
                     document.getElementById('reset-game').disabled = true;
                     disableChoiceButtons();
                 }
             } else {
+                gameState.allOnline = false;
                 gameSection.classList.add('disabled');
-                gameStatus.textContent = 'Waiting for players to come online...';
+                statusDot.classList.remove('ready');
+                statusText.textContent = 'Waiting for players to come online...';
                 document.getElementById('reset-game').disabled = true;
                 disableChoiceButtons();
             }
         }
-        
+ 
         function initializeGame() {
-            const choiceBtns = document.querySelectorAll('.choice-btn');
-            choiceBtns.forEach(btn => {
+            document.querySelectorAll('.choice-btn').forEach(btn => {
                 btn.addEventListener('click', handleChoiceClick);
             });
-            
             document.getElementById('reset-game').addEventListener('click', resetGame);
         }
-        
+ 
         function handleChoiceClick(e) {
-            if (!gameState.gameActive || gameState.myChoice !== null) {
-                return;
-            }
-            
-            const choice = e.target.dataset.choice;
+            if (!gameState.gameActive || gameState.myChoice !== null) return;
+ 
+            const choice = e.currentTarget.dataset.choice;
             gameState.myChoice = choice;
-            
-            // Update UI
-            e.target.classList.add('selected');
+            haptic('impact');
+ 
+            e.currentTarget.classList.add('selected');
             disableChoiceButtons();
-            
-            // Send choice to server
+ 
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({
                     type: 'rps_choice',
@@ -305,60 +435,91 @@
                     tournament_id: tournamentId
                 }));
             }
-            
-            document.getElementById('result-display').textContent = 'Waiting for opponent...';
+ 
+            setResult(`You picked ${choiceEmojis[choice]}`, `<span class="waiting-dots"><span></span><span></span><span></span></span> waiting for opponent`, '');
         }
-        
+ 
         function handleRPSChoice(data) {
             if (data.tournament_id !== tournamentId) return;
-            
-            // Store opponent's choice
             if (data.player_id != userId) {
                 gameState.opponentChoice = data.choice;
             }
-            
-            // If both players have made choices, determine winner
-            if (gameState.myChoice !== null && gameState.opponentChoice !== null) {
+            if (gameState.myChoice !== null && gameState.opponentChoice !== null && !gameState.roundResolved) {
                 determineWinner();
             }
         }
-        
-        function determineWinner() {
-            const myChoice = gameState.myChoice;
-            const opponentChoice = gameState.opponentChoice;
-            
-            let result = '';
-            let winnerId = null;
-            
-            if (myChoice === opponentChoice) {
-                result = `It's a tie! Both chose ${choiceEmojis[myChoice]}`;
-            } else if (
-                (myChoice === 'rock' && opponentChoice === 'scissors') ||
-                (myChoice === 'paper' && opponentChoice === 'rock') ||
-                (myChoice === 'scissors' && opponentChoice === 'paper')
-            ) {
-                result = `You win! ${choiceEmojis[myChoice]} beats ${choiceEmojis[opponentChoice]}`;
-                winnerId = userId;
-            } else {
-                result = `You lose! ${choiceEmojis[opponentChoice]} beats ${choiceEmojis[myChoice]}`;
-                const opponent = gameState.players.find(p => p.id.toString() !== userId.toString());
-                winnerId = opponent ? opponent.id : null;
-            }
-            
-            document.getElementById('result-display').textContent = result;
-            gameState.gameActive = false;
-
-            if (winnerId !== null) {
-                reportGameWin(winnerId);
+ 
+        function setResult(topHtml, bottomHtml, cls) {
+            const el = document.getElementById('result-display');
+            el.className = 'result-display' + (cls ? ' ' + cls : '');
+            el.innerHTML = `<div>${topHtml}</div>` + (bottomHtml ? `<div style="font-weight:500;font-size:13px;">${bottomHtml}</div>` : '');
+        }
+ 
+        function launchConfetti(container) {
+            const colors = ['#35d68a', '#ffb703', '#eef1f8', '#ff5d5d'];
+            for (let i = 0; i < 24; i++) {
+                const piece = document.createElement('div');
+                piece.className = 'confetti-piece';
+                piece.style.left = `${Math.random() * 100}%`;
+                piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+                piece.style.animationDelay = `${Math.random() * 0.3}s`;
+                container.appendChild(piece);
+                setTimeout(() => piece.remove(), 1800);
             }
         }
-
-        function reportGameWin(winnerId) {
-            const playerIds = gameState.players.map(p => p.id.toString()).sort();
-            if (playerIds.length < 2 || userId.toString() !== playerIds[0]) {
-                return;
+ 
+        function determineWinner() {
+            gameState.roundResolved = true;
+            gameState.gameActive = false;
+            disableChoiceButtons();
+ 
+            const myChoice = gameState.myChoice;
+            const opponentChoice = gameState.opponentChoice;
+            const reveal = `<div class="reveal-row"><span>${choiceEmojis[myChoice]}</span><span class="reveal-vs">VS</span><span>${choiceEmojis[opponentChoice]}</span></div>`;
+ 
+            let winnerId = null;
+            const el = document.getElementById('result-display');
+            el.innerHTML = '';
+ 
+            if (myChoice === opponentChoice) {
+                el.className = 'result-display tie';
+                el.innerHTML = reveal + `<div>It's a tie — both picked ${choiceEmojis[myChoice]}</div>`;
+                document.getElementById('status-text').textContent = "It's a tie!";
+                haptic('impact');
+            } else {
+                const iWin =
+                    (myChoice === 'rock' && opponentChoice === 'scissors') ||
+                    (myChoice === 'paper' && opponentChoice === 'rock') ||
+                    (myChoice === 'scissors' && opponentChoice === 'paper');
+ 
+                if (iWin) {
+                    el.className = 'result-display win';
+                    el.innerHTML = reveal + `<div>You win! ${choiceEmojis[myChoice]} beats ${choiceEmojis[opponentChoice]}</div>`;
+                    launchConfetti(el);
+                    winnerId = userId;
+                    haptic('success');
+                    document.getElementById('status-text').textContent = 'You won the round!';
+                } else {
+                    el.className = 'result-display lose';
+                    el.innerHTML = reveal + `<div>You lose — ${choiceEmojis[opponentChoice]} beats ${choiceEmojis[myChoice]}</div>`;
+                    const opponent = gameState.players.find(p => p.id.toString() !== userId.toString());
+                    winnerId = opponent ? opponent.id : null;
+                    haptic('error');
+                    document.getElementById('status-text').textContent = 'Round finished.';
+                }
             }
-
+ 
+            document.getElementById('status-dot').classList.remove('ready');
+ 
+            if (winnerId !== null) reportGameWin(winnerId);
+        }
+ 
+        function reportGameWin(winnerId) {
+            // Only one side should broadcast the result — the lower player id acts as reporter
+            // so a duplicate 'game_result' isn't sent by both clients.
+            const playerIds = gameState.players.map(p => p.id.toString()).sort();
+            if (playerIds.length < 2 || userId.toString() !== playerIds[0]) return;
+ 
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({
                     type: 'game_result',
@@ -368,63 +529,50 @@
                 }));
             }
         }
-        
+ 
         function updateGameStatus() {
             if (gameState.gameActive && gameState.myChoice === null) {
-                document.getElementById('result-display').textContent = 'Make your choice!';
+                document.getElementById('status-text').textContent = 'Make your choice!';
             }
         }
-        
+ 
         function enableChoiceButtons() {
-            const choiceBtns = document.querySelectorAll('.choice-btn');
-            choiceBtns.forEach(btn => {
-                btn.disabled = false;
-            });
+            document.querySelectorAll('.choice-btn').forEach(btn => { btn.disabled = false; });
         }
-        
+ 
         function disableChoiceButtons() {
-            const choiceBtns = document.querySelectorAll('.choice-btn');
-            choiceBtns.forEach(btn => {
-                btn.disabled = true;
-            });
+            document.querySelectorAll('.choice-btn').forEach(btn => { btn.disabled = true; });
         }
-        
+ 
         function resetGame() {
-            gameState.myChoice = null;
-            gameState.opponentChoice = null;
-            gameState.gameActive = true;
-            
             resetGameUI();
-            
             if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
-                    type: 'rps_reset',
-                    tournament_id: tournamentId
-                }));
+                ws.send(JSON.stringify({ type: 'rps_reset', tournament_id: tournamentId }));
             }
-            
-            updateGameStatus();
         }
-        
+ 
         function resetGameUI() {
-            const choiceBtns = document.querySelectorAll('.choice-btn');
-            choiceBtns.forEach(btn => {
+            document.querySelectorAll('.choice-btn').forEach(btn => {
                 btn.classList.remove('selected');
-                btn.disabled = false;
+                btn.disabled = !gameState.allOnline;
             });
-            
+ 
             gameState.myChoice = null;
             gameState.opponentChoice = null;
-            gameState.gameActive = true;
-            
-            document.getElementById('result-display').textContent = 'Make your choice!';
+            gameState.gameActive = gameState.allOnline;
+            gameState.roundResolved = false;
+ 
+            setResult('Make your choice!', '', '');
+            document.getElementById('status-dot').classList.toggle('ready', gameState.allOnline);
+            document.getElementById('status-text').textContent = gameState.allOnline
+                ? 'Make your choice!'
+                : 'Waiting for players to come online...';
         }
-        
+ 
         window.addEventListener('beforeunload', function() {
-            if (ws) {
-                ws.close();
-            }
+            if (ws) ws.close();
         });
     </script>
 </body>
 </html>
+ 

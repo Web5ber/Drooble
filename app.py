@@ -258,6 +258,66 @@ class ConnectionManager:
         # Remove broken connections
         for connection in connections_to_remove:
             self.active_connections[tournament_id].discard(connection)
+    
+    async def broadcast_puzzle_move(self, tournament_id: str, puzzle_data: dict):
+        if tournament_id not in self.active_connections:
+            return
+        
+        # Broadcast puzzle move to all connections in this tournament
+        connections_to_remove = []
+        for connection in list(self.active_connections[tournament_id]):  # Convert to list to avoid modification during iteration
+            try:
+                await connection.send_json({
+                    "type": "puzzle_move",
+                    **puzzle_data
+                })
+            except:
+                # Connection might be broken, mark for removal
+                connections_to_remove.append(connection)
+        
+        # Remove broken connections
+        for connection in connections_to_remove:
+            self.active_connections[tournament_id].discard(connection)
+    
+    async def broadcast_puzzle_reset(self, tournament_id: str):
+        if tournament_id not in self.active_connections:
+            return
+        
+        # Broadcast puzzle reset to all connections in this tournament
+        connections_to_remove = []
+        for connection in list(self.active_connections[tournament_id]):  # Convert to list to avoid modification during iteration
+            try:
+                await connection.send_json({
+                    "type": "puzzle_reset",
+                    "tournament_id": tournament_id
+                })
+            except:
+                # Connection might be broken, mark for removal
+                connections_to_remove.append(connection)
+        
+        # Remove broken connections
+        for connection in connections_to_remove:
+            self.active_connections[tournament_id].discard(connection)
+    
+    async def broadcast_puzzle_start(self, tournament_id: str):
+        if tournament_id not in self.active_connections:
+            return
+        
+        # Broadcast puzzle start to all connections in this tournament
+        connections_to_remove = []
+        for connection in list(self.active_connections[tournament_id]):  # Convert to list to avoid modification during iteration
+            try:
+                await connection.send_json({
+                    "type": "puzzle_start",
+                    "tournament_id": tournament_id
+                })
+            except:
+                # Connection might be broken, mark for removal
+                connections_to_remove.append(connection)
+        
+        # Remove broken connections
+        for connection in connections_to_remove:
+            self.active_connections[tournament_id].discard(connection)
 
     async def broadcast_scoreboard(self, tournament_id: str, scoreboard: list):
         if tournament_id not in self.active_connections:
@@ -503,6 +563,14 @@ async def rockpaperscissors(request: Request):
         "request": request
     })
 
+# Sliding 8 Puzzle game endpoint
+@app.get("/sliding8puzzle", response_class=HTMLResponse)
+async def sliding8puzzle(request: Request):
+    """Serve the Sliding 8 Puzzle game"""
+    return templates.TemplateResponse("sliding8puzzle.html", {
+        "request": request
+    })
+
 # Tournament page endpoint
 @app.get("/tournament/{tournament_id}", response_class=HTMLResponse)
 async def tournament_page(request: Request, tournament_id: str):
@@ -590,6 +658,22 @@ async def websocket_endpoint(websocket: WebSocket, tournament_id: str):
                 # Broadcast RPS reset to all players in tournament
                 print(f"Broadcasting RPS reset")
                 await manager.broadcast_rps_reset(tournament_id)
+            elif message.get("type") == "puzzle_move":
+                # Broadcast puzzle move to all players in tournament
+                print(f"Broadcasting puzzle move from player {message.get('player_id')}")
+                await manager.broadcast_puzzle_move(tournament_id, {
+                    "puzzle": message.get("puzzle"),
+                    "player_id": message.get("player_id"),
+                    "tournament_id": tournament_id
+                })
+            elif message.get("type") == "puzzle_reset":
+                # Broadcast puzzle reset to all players in tournament
+                print(f"Broadcasting puzzle reset")
+                await manager.broadcast_puzzle_reset(tournament_id)
+            elif message.get("type") == "puzzle_start":
+                # Broadcast puzzle start to all players in tournament
+                print(f"Broadcasting puzzle start")
+                await manager.broadcast_puzzle_start(tournament_id)
             elif message.get("type") == "game_result":
                 winner_id = message.get("winner_id")
                 game = message.get("game")
