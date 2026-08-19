@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Drooble Lobby</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --gold: #f6b93b;
+      --gold-bright: #ffd257;
+      --purple: #7c4fd0;
+      --purple-dim: #4a2f85;
+      --blue: #4f8ef7;
+      --text: #f4f2ee;
+      --text-dim: #9a978f;
+      --text-faint: #5c5a54;
+      --line: rgba(124, 79, 208, 0.28);
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      background: radial-gradient(ellipse 800px 500px at 50% -5%, rgba(124, 79, 208, 0.16), transparent 62%), #000;
+      color: var(--text);
+      font-family: "Space Grotesk", sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    .frame {
+      width: 100%;
+      max-width: 400px;
+      background: #060606;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      overflow: hidden;
+      box-shadow: 0 30px 70px -25px rgba(0, 0, 0, 0.8), 0 0 40px -10px rgba(124, 79, 208, 0.15);
+      animation: cardIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    }
+
+    @keyframes cardIn {
+      from {
+        opacity: 0;
+        transform: translateY(16px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 18px;
+    }
+
+    .back-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: #0d0d0d;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      cursor: pointer;
+      transition: border-color 0.15s ease, color 0.15s ease;
+      flex-shrink: 0;
+    }
+    .back-btn:hover {
+      border-color: rgba(124, 79, 208, 0.5);
+      color: var(--text);
+    }
+
+    .drooble-logo {
+      height: 70px;
+      width: auto;
+      display: block;
+      flex-shrink: 0;
+    }
+
+    .settings-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: #0d0d0d;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      cursor: pointer;
+      transition: border-color 0.15s ease, color 0.15s ease, transform 0.4s ease;
+      flex-shrink: 0;
+    }
+    .settings-btn:hover {
+      border-color: rgba(124, 79, 208, 0.5);
+      color: var(--text);
+      transform: rotate(45deg);
+    }
+
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--line) 15%, var(--line) 85%, transparent);
+    }
+
+    .section {
+      padding: 26px 22px;
+    }
+
+    .game-title {
+      text-align: center;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      color: var(--text-dim);
+      margin-bottom: 24px;
+    }
+
+    .vs-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 22px;
+      margin-bottom: 22px;
+    }
+
+    .player {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      width: 108px;
+    }
+
+    .avatar-tile {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .avatar-tile.blue {
+      background: linear-gradient(145deg, var(--blue), #2a5cc4);
+      box-shadow: 0 0 18px rgba(79, 142, 247, 0.4);
+    }
+
+    .avatar-tile.purple {
+      background: linear-gradient(145deg, var(--purple), var(--purple-dim));
+      box-shadow: 0 0 18px rgba(124, 79, 208, 0.45);
+    }
+
+    .player-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .vs-label {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--text-faint);
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 44px;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: #4fd67a;
+    }
+
+    .status .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #4fd67a;
+      box-shadow: 0 0 8px rgba(79, 214, 122, 0.8);
+      animation: pulse 1.6s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+
+    .info-title {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      color: var(--text-faint);
+      margin-bottom: 16px;
+    }
+
+    .info-desc {
+      text-align: center;
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text-dim);
+      font-weight: 300;
+      max-width: 260px;
+      margin: 0 auto 20px;
+    }
+
+    .rewards-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+    }
+
+    .reward-chip {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: #0d0d0d;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      padding: 7px 14px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .reward-chip.gold {
+      border-color: rgba(246, 185, 59, 0.35);
+      color: var(--gold-bright);
+    }
+
+    .reward-chip.purple {
+      border-color: rgba(124, 79, 208, 0.35);
+      color: #b79bf0;
+    }
+
+    .waiting-title {
+      text-align: center;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+
+    .loading-dots {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .loading-dots span {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--purple);
+      box-shadow: 0 0 8px rgba(124, 79, 208, 0.7);
+      animation: bounce 1.2s ease-in-out infinite;
+    }
+
+    .loading-dots span:nth-child(2) { animation-delay: 0.15s; }
+    .loading-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+      30% { transform: translateY(-6px); opacity: 1; }
+    }
+
+    .btn-invite {
+      width: 100%;
+      border: none;
+      border-radius: 14px;
+      padding: 15px 16px;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--gold-bright), var(--gold) 70%);
+      color: #241503;
+      box-shadow: 0 12px 24px -10px rgba(246, 185, 59, 0.5);
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+
+    .btn-invite:hover {
+      filter: brightness(1.06);
+      transform: translateY(-1px);
+    }
+
+    .btn-invite:active {
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+<div class="frame">
+
+  <div class="topbar">
+    <div class="back-btn">←</div>
+
+    <!-- Drooble logo image - much bigger, centered between buttons -->
+    <img src="drooble.svg" alt="Drooble" class="drooble-logo" />
+
+    <div class="settings-btn">⚙</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section">
+    <div class="game-title">TIC-TAC-TOE</div>
+
+    <div class="vs-row">
+      <div class="player">
+        <div class="avatar-tile blue">J</div>
+        <div class="player-name">@Joshua</div>
+      </div>
+      <div class="vs-label">VS</div>
+      <div class="player">
+        <div class="avatar-tile purple">A</div>
+        <div class="player-name">@Alex</div>
+      </div>
+    </div>
+
+    <div class="status-row">
+      <div class="status"><span class="dot"></span> READY</div>
+      <div class="status"><span class="dot"></span> READY</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section">
+    <div class="info-title">GAME INFO</div>
+    <p class="info-desc">First to win the game wins the match</p>
+    <div class="rewards-row">
+      <div class="reward-chip gold">🏆 100 XP</div>
+      <div class="reward-chip purple">🪙 25</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section">
+    <div class="waiting-title">Waiting for players...</div>
+    <div class="loading-dots">
+      <span></span><span></span><span></span>
+    </div>
+    <button class="btn-invite">INVITE FRIEND</button>
+  </div>
+
+</div>
+
+</body>
+</html>

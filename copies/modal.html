@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Game Selection Modal</title>
+  <!-- Font Awesome 6 (Free) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --gold: #f6b93b;
+      --gold-bright: #ffd257;
+      --purple: #7c4fd0;
+      --purple-dim: #4a2f85;
+      --blue: #4f8ef7;
+      --text: #f4f2ee;
+      --text-dim: #9a978f;
+      --text-faint: #5c5a54;
+      --line: rgba(124, 79, 208, 0.28);
+    }
+
+    html, body {
+      height: 100%;
+      min-height: 100vh;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: transparent;
+      color: var(--text);
+      font-family: "Space Grotesk", sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+
+    /* No padding - fits flush inside the iframe container */
+    .modal-content {
+      width: 100%;
+      max-width: 400px;
+      padding: 20px 20px 18px 20px;
+      animation: slideUp 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(30px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .modal-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      color: var(--text);
+    }
+
+    .modal-sub {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    .modal-close {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: transparent;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      flex-shrink: 0;
+      transition: border-color 0.15s ease, color 0.15s ease;
+    }
+    .modal-close:hover {
+      border-color: rgba(124, 79, 208, 0.5);
+      color: var(--text);
+    }
+
+    .game-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 16px 0 4px 0;
+    }
+
+    .game-option {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 8px 12px 8px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      background: rgba(255, 255, 255, 0.02);
+      cursor: pointer;
+      transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+      position: relative;
+    }
+    .game-option:hover {
+      border-color: rgba(124, 79, 208, 0.5);
+      background: rgba(124, 79, 208, 0.07);
+      transform: translateY(-2px);
+    }
+    .game-option.selected {
+      border-color: var(--gold);
+      background: rgba(246, 185, 59, 0.08);
+    }
+    .game-option.selected .game-icon {
+      color: #241503;
+      background: linear-gradient(135deg, var(--gold-bright), var(--gold) 70%);
+      box-shadow: 0 0 16px rgba(246, 185, 59, 0.5);
+    }
+    .game-option.selected::after {
+      content: '\f00c';
+      font-family: "Font Awesome 6 Free";
+      font-weight: 900;
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      font-size: 10px;
+      color: var(--gold-bright);
+    }
+
+    .game-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: rgba(124, 79, 208, 0.14);
+      color: #b79bf0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .game-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      text-align: center;
+      letter-spacing: 0.01em;
+    }
+
+    .game-option.locked {
+      cursor: not-allowed;
+      opacity: 0.4;
+    }
+    .game-option.locked:hover {
+      transform: none;
+      border-color: rgba(255, 255, 255, 0.07);
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .modal-footnote {
+      font-size: 11px;
+      color: var(--text-faint);
+      text-align: center;
+      margin: 12px 0 14px 0;
+      line-height: 1.5;
+    }
+
+    .btn-confirm {
+      width: 100%;
+      border: none;
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--gold-bright), var(--gold) 70%);
+      color: #241503;
+      box-shadow: 0 12px 24px -10px rgba(246, 185, 59, 0.5);
+      transition: transform 0.15s ease, filter 0.15s ease, opacity 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .btn-confirm:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    .btn-confirm:not(:disabled):hover {
+      filter: brightness(1.06);
+      transform: translateY(-1px);
+    }
+
+    /* responsive */
+    @media (max-width: 440px) {
+      .modal-content {
+        padding: 16px 16px 14px 16px;
+      }
+      .game-grid {
+        gap: 8px;
+      }
+      .game-option {
+        padding: 12px 6px 10px 6px;
+        gap: 6px;
+      }
+      .game-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 15px;
+      }
+      .game-name {
+        font-size: 11px;
+      }
+    }
+
+    @media (max-width: 360px) {
+      .modal-content {
+        padding: 14px 12px 12px 12px;
+      }
+      .game-grid {
+        gap: 6px;
+      }
+      .game-option {
+        padding: 10px 4px 8px 4px;
+        gap: 5px;
+      }
+      .game-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 13px;
+      }
+      .game-name {
+        font-size: 10px;
+      }
+      .modal-title {
+        font-size: 14px;
+      }
+      .modal-sub {
+        font-size: 10px;
+      }
+    }
+
+    @media screen and (max-height: 600px) {
+      .modal-content {
+        padding: 12px 14px 10px 14px;
+      }
+      .game-grid {
+        gap: 6px;
+        margin: 10px 0 2px 0;
+      }
+      .game-option {
+        padding: 8px 4px 6px 4px;
+        gap: 4px;
+      }
+      .game-icon {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+        border-radius: 8px;
+      }
+      .game-name {
+        font-size: 9px;
+      }
+      .modal-footnote {
+        font-size: 9px;
+        margin: 8px 0 10px 0;
+      }
+      .btn-confirm {
+        padding: 8px 12px;
+        font-size: 12px;
+      }
+      .modal-close {
+        width: 26px;
+        height: 26px;
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="modal-content">
+  <div class="modal-head">
+    <div>
+      <div class="modal-title">Choose your game</div>
+      <div class="modal-sub">You have first pick — @Alex picks the second.</div>
+    </div>
+    <button class="modal-close" id="modalCloseBtn" aria-label="Close">
+      <i class="fas fa-xmark"></i>
+    </button>
+  </div>
+
+  <div class="game-grid" id="gameGrid">
+    <div class="game-option" data-game="tictactoe">
+      <div class="game-icon"><i class="fas fa-hashtag"></i></div>
+      <div class="game-name">Tic-Tac-Toe</div>
+    </div>
+    <div class="game-option" data-game="connect4">
+      <div class="game-icon"><i class="fas fa-circle"></i></div>
+      <div class="game-name">Connect 4</div>
+    </div>
+    <div class="game-option" data-game="chess">
+      <div class="game-icon"><i class="fas fa-chess-knight"></i></div>
+      <div class="game-name">Chess</div>
+    </div>
+    <div class="game-option" data-game="checkers">
+      <div class="game-icon"><i class="fas fa-chess-board"></i></div>
+      <div class="game-name">Checkers</div>
+    </div>
+    <div class="game-option" data-game="dominoes">
+      <div class="game-icon"><i class="fas fa-dice-six"></i></div>
+      <div class="game-name">Dominoes</div>
+    </div>
+    <div class="game-option locked" data-game="locked">
+      <div class="game-icon"><i class="fas fa-lock"></i></div>
+      <div class="game-name">Coming Soon</div>
+    </div>
+  </div>
+
+  <div class="modal-footnote">
+    Game 3 picked at random from remaining titles.
+  </div>
+
+  <button class="btn-confirm" id="confirmGameBtn" disabled>
+    <i class="fas fa-check"></i> CONFIRM PICK
+  </button>
+</div>
+
+<script>
+  const closeBtn = document.getElementById('modalCloseBtn');
+  const confirmBtn = document.getElementById('confirmGameBtn');
+  const options = document.querySelectorAll('.game-option:not(.locked)');
+  let selectedGame = null;
+
+  function closeModal() {
+    if (window.parent !== window) {
+      window.parent.postMessage('closeModal', '*');
+    } else {
+      window.close();
+    }
+  }
+
+  closeBtn.addEventListener('click', closeModal);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeModal();
+  });
+
+  options.forEach((opt) => {
+    opt.addEventListener('click', () => {
+      options.forEach((o) => o.classList.remove('selected'));
+      opt.classList.add('selected');
+      selectedGame = opt.dataset.game;
+      confirmBtn.disabled = false;
+    });
+  });
+
+  confirmBtn.addEventListener('click', () => {
+    if (!selectedGame) return;
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: 'gameSelected', game: selectedGame }, '*');
+    } else {
+      alert(`🎮 Starting match with "${selectedGame}"!`);
+    }
+    closeModal();
+  });
+</script>
+
+</body>
+</html>

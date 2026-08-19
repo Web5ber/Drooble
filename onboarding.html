@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Join Drooble</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #050505;
+      --card: #0e0e11;
+      --card-border: rgba(255, 255, 255, 0.08);
+      --gold: #f6b93b;
+      --gold-bright: #ffd257;
+      --purple: #7c4fd0;
+      --purple-dim: #4a2f85;
+      --text: #f4f2ee;
+      --text-dim: #9a978f;
+      --text-faint: #5c5a54;
+      --danger-line: rgba(255, 255, 255, 0.07);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+      min-height: 100vh;
+      min-width: 100vw;
+    }
+
+    body {
+      background: #000;
+      color: var(--text);
+      font-family: "Space Grotesk", sans-serif;
+      min-height: 100vh;
+      min-width: 100vw;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 30px 20px 60px 20px;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    /* Full coverage background */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #000;
+      z-index: -2;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(ellipse 800px 500px at 50% -5%, rgba(124, 79, 208, 0.16), transparent 62%);
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .stage {
+      width: 100%;
+      max-width: 380px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 10px;
+      position: relative;
+      z-index: 1;
+      min-height: 100%;
+    }
+
+    .logo-wrap {
+      margin-bottom: 22px;
+      z-index: 2;
+      filter: drop-shadow(0 10px 30px rgba(246, 185, 59, 0.2));
+      animation: floatIn 0.7s cubic-bezier(.2, .8, .2, 1) both;
+      /* ensure logo never clips */
+      padding: 0 10px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .logo-wrap img {
+      width: 200px;
+      height: auto;
+      max-width: 100%;
+      display: block;
+      margin: 0 auto;
+      min-height: 60px;
+    }
+
+    @keyframes floatIn {
+      from {
+        opacity: 0;
+        transform: translateY(-14px) scale(0.96);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .card {
+      width: 100%;
+      padding: 0;
+      animation: cardIn 0.6s cubic-bezier(.2, .8, .2, 1) both;
+      animation-delay: 0.08s;
+      position: relative;
+    }
+
+    @keyframes cardIn {
+      from {
+        opacity: 0;
+        transform: translateY(16px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .headline {
+      text-align: center;
+      font-size: 21px;
+      font-weight: 600;
+      line-height: 1.4;
+      letter-spacing: -0.01em;
+      margin-bottom: 26px;
+    }
+
+    .headline .at {
+      color: var(--gold-bright);
+    }
+
+    .divider {
+      height: 1px;
+      width: 100%;
+      background: linear-gradient(90deg, transparent, rgba(124, 79, 208, 0.5) 20%, rgba(124, 79, 208, 0.5) 80%, transparent);
+      margin: 0 0 22px;
+    }
+
+    .perm-intro {
+      font-size: 14px;
+      line-height: 1.65;
+      color: var(--text-dim);
+      font-weight: 300;
+      margin-bottom: 16px;
+    }
+
+    .perm-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .perm-list li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14.5px;
+      font-weight: 400;
+      color: var(--text);
+    }
+
+    .perm-list .dot {
+      width: 6px;
+      height: 6px;
+      min-width: 6px;
+      border-radius: 50%;
+      background: var(--purple);
+      box-shadow: 0 0 8px rgba(124, 79, 208, 0.7);
+    }
+
+    .perm-note {
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text-faint);
+      font-weight: 300;
+      margin-bottom: 24px;
+    }
+
+    .field-label {
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-faint);
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+
+    .user-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #0d0d0d;
+      border: 1px solid rgba(124, 79, 208, 0.35);
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-bottom: 22px;
+      box-shadow: 0 0 0 1px rgba(124, 79, 208, 0.06) inset, 0 8px 20px -12px rgba(124, 79, 208, 0.35);
+    }
+
+    .avatar {
+      width: 38px;
+      height: 38px;
+      min-width: 38px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, var(--purple), var(--purple-dim));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 15px;
+      color: #fff;
+      box-shadow: 0 0 14px rgba(124, 79, 208, 0.55);
+    }
+
+    .user-handle {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .btn {
+      width: 100%;
+      border: none;
+      border-radius: 14px;
+      padding: 15px 16px;
+      font-family: inherit;
+      font-size: 15.5px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--gold-bright), var(--gold) 70%);
+      color: #241503;
+      margin-bottom: 14px;
+      box-shadow: 0 12px 24px -10px rgba(246, 185, 59, 0.5);
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.06);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-cancel {
+      background: transparent;
+      color: var(--text-faint);
+      font-weight: 500;
+      font-size: 14px;
+      padding: 8px;
+    }
+
+    .btn-cancel:hover {
+      color: var(--text-dim);
+    }
+
+    /* responsive */
+    @media (max-width: 440px) {
+      .logo-wrap img {
+        width: 160px;
+        min-height: 50px;
+      }
+      .headline {
+        font-size: 18px;
+      }
+      .perm-list li {
+        font-size: 13px;
+      }
+      .user-row {
+        padding: 10px 12px;
+      }
+    }
+
+    @media (max-width: 360px) {
+      body {
+        padding: 20px 14px 60px 14px;
+      }
+      .logo-wrap img {
+        width: 130px;
+        min-height: 40px;
+      }
+      .headline {
+        font-size: 16px;
+        margin-bottom: 18px;
+      }
+      .card {
+        padding: 0;
+      }
+      .btn {
+        padding: 13px 14px;
+        font-size: 14px;
+      }
+      .perm-list li {
+        font-size: 12.5px;
+        gap: 8px;
+      }
+      .perm-intro {
+        font-size: 13px;
+      }
+      .perm-note {
+        font-size: 12px;
+      }
+      .field-label {
+        font-size: 10px;
+      }
+      .user-row {
+        padding: 8px 10px;
+        gap: 10px;
+      }
+      .avatar {
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+        font-size: 13px;
+      }
+      .user-handle {
+        font-size: 13px;
+      }
+    }
+
+    @media screen and (max-height: 700px) {
+      body {
+        padding: 20px 20px 80px 20px;
+      }
+      .stage {
+        padding-top: 5px;
+      }
+      .logo-wrap {
+        margin-bottom: 14px;
+      }
+      .logo-wrap img {
+        width: 150px;
+        min-height: 45px;
+      }
+      .headline {
+        font-size: 18px;
+        margin-bottom: 18px;
+      }
+      .divider {
+        margin: 0 0 14px;
+      }
+      .perm-intro {
+        font-size: 13px;
+        margin-bottom: 12px;
+      }
+      .perm-list {
+        gap: 6px;
+        margin-bottom: 12px;
+      }
+      .perm-list li {
+        font-size: 13px;
+      }
+      .perm-note {
+        font-size: 12px;
+        margin-bottom: 16px;
+      }
+      .user-row {
+        padding: 8px 12px;
+        margin-bottom: 16px;
+      }
+      .btn {
+        padding: 12px 14px;
+        font-size: 14px;
+      }
+      .btn-cancel {
+        padding: 6px;
+        font-size: 13px;
+      }
+    }
+
+    @media screen and (max-height: 600px) {
+      body {
+        padding: 10px 16px 100px 16px;
+      }
+      .logo-wrap img {
+        width: 120px;
+        min-height: 36px;
+      }
+      .headline {
+        font-size: 15px;
+        margin-bottom: 12px;
+      }
+      .perm-intro {
+        font-size: 12px;
+        margin-bottom: 8px;
+      }
+      .perm-list {
+        gap: 4px;
+        margin-bottom: 8px;
+      }
+      .perm-list li {
+        font-size: 12px;
+        gap: 6px;
+      }
+      .perm-list .dot {
+        width: 5px;
+        height: 5px;
+        min-width: 5px;
+      }
+      .perm-note {
+        font-size: 11px;
+        margin-bottom: 12px;
+      }
+      .user-row {
+        padding: 6px 10px;
+        margin-bottom: 12px;
+        gap: 8px;
+      }
+      .avatar {
+        width: 28px;
+        height: 28px;
+        min-width: 28px;
+        font-size: 11px;
+      }
+      .user-handle {
+        font-size: 12px;
+      }
+      .field-label {
+        font-size: 9px;
+        margin-bottom: 4px;
+      }
+      .btn {
+        padding: 10px 12px;
+        font-size: 13px;
+        border-radius: 10px;
+      }
+      .btn-cancel {
+        padding: 4px;
+        font-size: 12px;
+      }
+      .divider {
+        margin: 0 0 10px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .logo-wrap,
+      .card {
+        animation: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="stage">
+    <div class="logo-wrap">
+      <img src="drooble.svg" alt="Drooble" class="drooble-logo" />
+    </div>
+    <div class="card">
+      <div class="headline">
+        You're about to join a game<br>
+        with <span class="at">@username</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <p class="perm-intro">
+        To continue, Drooble will use your Telegram information to create your Drooble account. This includes:
+      </p>
+
+      <ul class="perm-list">
+        <li><span class="dot"></span> Your Telegram username</li>
+        <li><span class="dot"></span> Your Telegram name</li>
+      </ul>
+
+      <p class="perm-note">
+        You can customize your Drooble profile later.
+      </p>
+
+      <div class="divider"></div>
+
+      <div class="field-label">Username</div>
+      <div class="user-row">
+        <div class="avatar">J</div>
+        <div class="user-handle">@Joshua</div>
+      </div>
+
+      <button class="btn btn-primary">Continue &amp; Play</button>
+      <button class="btn btn-cancel">Cancel</button>
+    </div>
+  </div>
+
+</body>
+</html>
